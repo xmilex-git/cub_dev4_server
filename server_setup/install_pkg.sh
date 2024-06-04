@@ -15,7 +15,7 @@ yum groupinstall -y "Core" --allowerasing --setopt=group_package_types=mandatory
 yum install -y \
                 scl-utils \
                 ninja-build \
-                stdc++-static \
+                libstdc++-static \
                 elfutils-libelf-devel \
                 ncurses-devel \
                 openssl \
@@ -59,10 +59,13 @@ yum install -y \
                 vim-enhanced \
                 yum-utils \
                 bash-completion \
-                astyle
+                astyle \
                 ant \
                 rapid-json \
                 hunspell-ko \
                 nmap-ncat \
                 ;
 
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+yum install -y docker-ce docker-ce-cli containerd.io --allow-erasing
