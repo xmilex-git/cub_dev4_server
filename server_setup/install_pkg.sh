@@ -10,12 +10,12 @@ yum install -y  man \
 
 yum groupinstall -y "Development Tools" --setopt=group_package_types=mandatory,default,optional
 yum groupinstall -y "Base" --setopt=group_package_types=mandatory,default
-yum install -y hunspell-ko
 yum groupinstall -y "Core" --allowerasing --setopt=group_package_types=mandatory
 
 yum install -y \
                 scl-utils \
                 ninja-build \
+                stdc++-static \
                 elfutils-libelf-devel \
                 ncurses-devel \
                 openssl \
@@ -27,7 +27,7 @@ yum install -y \
                 python3 \
                 python3-devel \
                 cgdb \
-                cmake3 \
+                cmake \
                 glances \
                 htop \
                 jq \
@@ -48,5 +48,21 @@ yum install -y \
                 cockpit \
                 glibc \
                 glibc-static \
+                kcachegrind \
+                indent \
+                lsof \
+                man-db \
+                man-pages \
+                openssh-server \
+                systemtap-sdt-devel \
+                unixODBC-devel \
+                vim-enhanced \
+                yum-utils \
+                bash-completion \
+                astyle
+                ant \
+                rapid-json \
+                hunspell-ko \
+                nmap-ncat \
                 ;
 
