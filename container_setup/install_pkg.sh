@@ -63,8 +63,17 @@ yum install -y \
                 ant \
                 hunspell-ko \
                 nmap-ncat \
+                rapidjson \
+                jsoncpp-devel \
+                jsoncpp \
+                json-glib \
+                json-glib-devel \
+                json11 \
+                json11-devel \
+                json \
+                json-devel  \
+                json-c  \
+                json-c-devel  \
                 ;
 
-yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
-yum install -y docker-ce docker-ce-cli containerd.io --allowerasing
