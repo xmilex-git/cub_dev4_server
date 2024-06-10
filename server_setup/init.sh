@@ -28,8 +28,8 @@ mkdir -p /home/docker
 
 docker network create \
                 -d ipvlan \
-                --subnet=192.168.7.0/24 \
-                --gateway=192.168.7.1 \
+                --subnet=192.168.6.0/24 \
+                --gateway=192.168.6.1 \
                 -o parent=eno1np0 \
                 -o ipvlan_mode=l2 \
                 my_ipvlan_1
