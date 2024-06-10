@@ -7,14 +7,14 @@ systemctl set-default multi-user.target
 yum install -y epel-release
 yum install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm
 
+# you have to reboot
+server_setup/install_pkg.sh
+
 rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
 yum install -y https://www.elrepo.org/elrepo-release-8.el8.elrepo.noarch.rpm
 yum --enablerepo=elrepo-kernel install -y kernel-ml kernel-ml-devel
 
 echo "exclude=kernel*" >> /etc/yum.conf
-
-# you have to reboot
-server_setup/install_pkg.sh
 
 systemctl disable avahi-daemon.service \
                         firewalld.service \
@@ -34,11 +34,3 @@ docker network create \
                 -o ipvlan_mode=l2 \
                 my_ipvlan_1
 
-docker run -d --name test1 \
-	--hostname test1 \
-        --net=my_ipvlan_1 \
-        --privileged \
-        --ip 192.168.7.3 \
-        rockylinux:8 /sbin/init
-
-docker exec -it test1 /bin/bash
