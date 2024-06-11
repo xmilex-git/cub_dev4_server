@@ -7,7 +7,7 @@
 4. [Running Scripts](#running-scripts)
 
 ### Server Preparation
-- **Kernel Update**: Ensure your server is running on the latest kernel. Modify the GRUB settings as needed. Refer to the script at `server_setup/init.sh` but **do not execute it directly** without reviewing its content.
+- **Kernel Update**: Ensure your server is running on the latest kernel. Modify the GRUB settings as needed. Refer to the script at [server_setup/init.sh](https://github.com/xmilex-git/cub_dev4_server/blob/main/server_setup/init.sh) but **do not execute it directly** without reviewing its content.
 
 ### Installing Tools
 - **Install Podman and Buildah**: These tools are essential for container management and image creation.
