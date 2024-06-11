@@ -1,4 +1,4 @@
-FROM    rockylinux/rockylinux:8.10.20240528
+FROM    rockylinux:8
 
 RUN     yum install -y  yum-utils
 
@@ -18,6 +18,15 @@ RUN     yum install -y $(cat yum_requirements.txt)
 
 RUN     rm -rf /etc/localtime && \
         ln -s /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+
+RUN     mkdir -p /etc/dev4_skeleton
+
+COPY    .cubrid.sh      /etc/dev4_skeleton/.cubrid.sh
+COPY    .dev4_profile   /etc/dev4_skeleton/.dev4_profile 
+COPY    .gdbinit        /etc/dev4_skeleton/.gdbinit  
+COPY    entrypoint.sh   /etc/dev4_skeleton/entrypoint.sh
+
+RUN     chmod +x /etc/dev4_skeleton/entrypoint.sh
 
 CMD     ["/usr/sbin/init"]
 

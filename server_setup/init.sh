@@ -35,3 +35,24 @@ docker network create \
                 -o ipvlan_mode=l2 \
                 my_ipvlan_1
 
+podman network create \
+                --dns 1.1.1.1 \
+                --driver ipvlan \
+                --gateway 192.168.6.1 \
+                --interface-name eno1np0 \
+
+podman network create \
+                -d ipvlan \
+                -o parent=eno1np0 \
+                -o mode=l2 \
+                --subnet 192.168.6.0/24 \
+                --gateway 192.168.6.1 \
+                newnet
+
+podman network create \
+                -d ipvlan \
+                -o parent=ens160 \
+                -o mode=l2 \
+                --subnet 192.168.226.0/24 \
+                --gateway 192.168.226.2 \
+                ipv1

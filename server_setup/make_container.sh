@@ -11,7 +11,7 @@ IP_D_CLASS=$1
 HOST_NAME=$2
 
 CONTAINER_NAME=${HOST_NAME}-${IP_D_CLASS}
-IP="192.168.6.${IP_D_CLASS}"
+IP="192.168.226.${IP_D_CLASS}"
 
 UID=${IP_D_CLASS}0001
 GID=${IP_D_CLASS}0000
@@ -35,14 +35,22 @@ else
   echo "No existing IP address found. Continuing..."
 fi
 
-
-docker run -d --name ${CONTAINER_NAME} \
-	--hostname ${HOST_NAME} \
-        --net=my_ipvlan_1 \
-        --privileged \
-        --ip ${IP} \
-        rockylinux/rockylinux:8.10.20240528 /usr/sbin/init
-
 echo "${IP}     ${HOSTNAME}" >> /root/ip.txt
 
-docker exec -it test1 /bin/bash
+mkdir   -p /data/${CONTAINER_NAME}
+
+podman  run -d --name ${CONTAINER_NAME} \
+	--hostname ${HOST_NAME} \
+        --network=ipv1 \
+        --ip=${IP} \
+        --cap-add AUDIT_READ \
+        --cap-add AUDIT_WRITE \
+        --cap-add PERFMON \
+        --cap-add SYS_PTRACE \
+        --cap-add DAC_OVERRIDE \
+        --security-opt seccomp=unconfined \
+        dev4_image_base:1 /usr/sbin/init
+
+sleep   5s
+
+podman  exec -it ${CONTAINER_NAME} /bin/bash /etc/dev4_skeleton/entrypoint.sh cubrid ${UID} ${CONTAINER_NAME}_group ${GID}
