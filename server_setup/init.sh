@@ -1,6 +1,7 @@
 #!/bin/bash
 
 NIC=eno1np0
+OLD_NIC=eno1
 
 systemctl set-default multi-user.target
 
@@ -14,15 +15,15 @@ rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
 yum install -y https://www.elrepo.org/elrepo-release-8.el8.elrepo.noarch.rpm
 yum --enablerepo=elrepo-kernel install -y kernel-ml kernel-ml-devel
 
-echo "exclude=kernel*" >> /etc/yum.conf
-
-systemctl disable avahi-daemon.service \
-                        firewalld.service \
-&& systemctl enable  cockpit.socket \
-                         sshd
+grubby --info=ALL
+grubby --set-default=/boot/vmlinuz-${kernel-version} # you need to choose
 
 rm -rf /etc/localtime \
 && ln -s /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+
+cp /etc/sysconfig/network-scripts/ifcfg-${OLD_NIC} /etc/sysconfig/network-scripts/ifcfg-${NIC}
+
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 
 mkdir -p /home/docker
 
