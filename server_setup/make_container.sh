@@ -25,6 +25,7 @@ if cat /etc/passwd | grep $USERNAME_T; then
 else 
   groupadd -g ${GID_T} ${GROUPNAME_T}
   useradd -u ${UID_T} -g ${GROUPNAME_T} ${USERNAME_T}
+  echo "$USERNAME_T:password" | chpasswd
 fi
 
 # /root/ip.txt에서 특정 IP 주소 검색
