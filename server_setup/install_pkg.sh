@@ -2,69 +2,21 @@
 
 yum install -y  yum-utils
 
-yum config-manager --enable devel ha nfv plus powertools remi resilient-storage rt
-
-yum install -y  man \
-                man-pages \
-                kernel-doc
-
-yum groupinstall -y "Development Tools" --setopt=group_package_types=mandatory,default,optional 
-yum groupinstall -y "Base" --setopt=group_package_types=mandatory,default 
-yum groupinstall -y "Core" --allowerasing --setopt=group_package_types=mandatory 
+yum config-manager --enable devel powertools
 
 yum install -y \
-                scl-utils \
-                ninja-build \
-                libstdc++-static \
-                elfutils-libelf-devel \
-                ncurses-devel \
-                openssl \
-                openssl-devel \
-                java-1.8.0-openjdk \
-                java-1.8.0-openjdk-devel \
-                java-11-openjdk \
-                java-11-openjdk-devel \
-                python3 \
-                python3-devel \
-                cgdb \
-                cmake \
-                glances \
-                htop \
-                jq \
-                maven \
-                samba \
-                telnet \
-                zsh \
-                dh-autoreconf \
-                curl-devel \
-                expat-devel \
-                gettext-devel \
-                openssl-devel \
-                perl-devel \
-                zlib-devel \
-                asciidoc \
-                xmlto \
-                docbook2X \
-                cockpit \
-                glibc \
-                glibc-static \
-                kcachegrind \
-                indent \
-                lsof \
-                man-db \
+                man \
                 man-pages \
+                kernel-doc \
+                net-tools \
+                scl-utils \
                 openssh-server \
-                systemtap-sdt-devel \
-                unixODBC-devel \
                 vim-enhanced \
-                yum-utils \
                 bash-completion \
-                astyle \
-                ant \
                 hunspell-ko \
-                nmap-ncat \
+                podman \
+                buildah \
+                htop \
+                passwd \
                 ;
 
-yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-
-yum install -y docker-ce docker-ce-cli containerd.io --allowerasing
