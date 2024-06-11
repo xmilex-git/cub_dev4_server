@@ -29,6 +29,8 @@ COPY    entrypoint.sh   /etc/dev4_skeleton/entrypoint.sh
 
 RUN     chmod +x /etc/dev4_skeleton/entrypoint.sh
 
+RUN     sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+
 CMD     ["/usr/sbin/init"]
 
 

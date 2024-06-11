@@ -45,13 +45,14 @@ podman  run -d \
 	--hostname ${HOST_NAME_T} \
         --network=ipv1 \
         --ip=${IP} \
+        --cap-add AUDIT_CONTROL \
         --cap-add AUDIT_READ \
         --cap-add AUDIT_WRITE \
         --cap-add PERFMON \
         --cap-add SYS_PTRACE \
         --cap-add DAC_OVERRIDE \
         --security-opt seccomp=unconfined \
-        dev4_image_base:1.1 /usr/sbin/init
+        dev4_image_base:1.2 /usr/sbin/init
 
 sleep   5s
 

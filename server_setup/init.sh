@@ -25,21 +25,7 @@ cp /etc/sysconfig/network-scripts/ifcfg-${OLD_NIC} /etc/sysconfig/network-script
 
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 
-mkdir -p /home/docker
-
-docker network create \
-                -d ipvlan \
-                --subnet=192.168.6.0/24 \
-                --gateway=192.168.6.1 \
-                -o parent=eno1np0 \
-                -o ipvlan_mode=l2 \
-                my_ipvlan_1
-
-podman network create \
-                --dns 1.1.1.1 \
-                --driver ipvlan \
-                --gateway 192.168.6.1 \
-                --interface-name eno1np0 \
+mkdir -p /home/podman
 
 podman network create \
                 -d ipvlan \
