@@ -18,7 +18,7 @@ yum update -y
 
 grubby --info=ALL
 grubby --set-default=/boot/vmlinuz-${kernel-version} # you need to choose
-
+grubby --set-default=/boot/vmlinuz-6.9.3-1.el8.elrepo.x86_64
 cp /etc/sysconfig/network-scripts/ifcfg-${OLD_NIC} /etc/sysconfig/network-scripts/ifcfg-${NIC}
 # you need to change new ifcfg-${NIC}, device and name
 # you have to reboot
@@ -29,6 +29,8 @@ rm -rf /etc/localtime \
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 
 mkdir -p /home/podman
+
+sed -i 's|graphroot = "/var/lib/containers/storage"|graphroot = "/home/podman"|' /etc/containers/storage.conf
 
 podman network create \
                 -d ipvlan \
