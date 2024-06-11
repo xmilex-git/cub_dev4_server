@@ -18,5 +18,6 @@ yum install -y \
                 buildah \
                 htop \
                 passwd \
+                git \
                 ;
 
