@@ -1,9 +1,4 @@
 #!/bin/bash
-export PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-export LANG="ko_KR.utf8"
-export LANGUAGE="ko_KR"
-export LC_ALL="ko_KR.utf8"
-
 export MAKEFLAGS="-j $(nproc)"
 ulimit -Sc 0
 

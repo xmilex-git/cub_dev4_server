@@ -39,7 +39,9 @@ echo "${IP}     ${HOST_NAME_T}" >> /root/ip.txt
 
 mkdir   -p /data/${CONTAINER_NAME_T}
 
-podman  run -d --name ${CONTAINER_NAME_T} \
+podman  run -d \
+        -v /data/${CONTAINER_NAME_T}:/data \
+        --name ${CONTAINER_NAME_T} \
 	--hostname ${HOST_NAME_T} \
         --network=ipv1 \
         --ip=${IP} \

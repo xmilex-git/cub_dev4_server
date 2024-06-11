@@ -20,6 +20,7 @@ RUN     rm -rf /etc/localtime && \
         ln -s /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
 RUN     mkdir -p /etc/dev4_skeleton
+RUN     mkdir -p /data
 
 COPY    .cubrid.sh      /etc/dev4_skeleton/.cubrid.sh
 COPY    .dev4_profile   /etc/dev4_skeleton/.dev4_profile 
