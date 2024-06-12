@@ -47,3 +47,5 @@ astyle
 ant 
 hunspell-ko 
 nmap-ncat 
+langpack* 
+glibc-langpack* 
