@@ -20,6 +20,7 @@ mv      /etc/dev4_skeleton/.dev4_profile        /home/${USERNAME_T}/.dev4_profil
 mv      /etc/dev4_skeleton/.gdbinit             /home/${USERNAME_T}/.gdbinit
 
 chown -R ${USERNAME_T}:${GROUPNAME_T} /home/${USERNAME_T}
+chown -R ${USERNAME_T}:${GROUPNAME_T} /data
 
 echo "source /home/${USERNAME_T}/.dev4_profile" >> /home/${USERNAME_T}/.bashrc
 
