@@ -30,6 +30,12 @@ sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 
 mkdir -p /home/podman
 
+mkdir -p /home/podman/overlay-images
+
+mkdir -p /data/podman-images
+
+ln -s /data/podman-images /home/podman/overlay-images
+
 sed -i 's|graphroot = "/var/lib/containers/storage"|graphroot = "/home/podman"|' /etc/containers/storage.conf
 
 podman network create \
