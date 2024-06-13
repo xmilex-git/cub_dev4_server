@@ -27,3 +27,5 @@ echo "source /home/${USERNAME_T}/.dev4_profile" >> /home/${USERNAME_T}/.bashrc
 cat /etc/passwd | grep ${USERNAME_T}
 
 echo "${USERNAME_T}     ALL=(ALL)       ALL" >> /etc/sudoers
+
+systemctl set-default multi-user.target
