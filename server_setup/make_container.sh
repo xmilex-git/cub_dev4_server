@@ -54,7 +54,7 @@ podman  run -d \
         --cap-add SYS_PTRACE \
         --cap-add DAC_OVERRIDE \
         --security-opt seccomp=unconfined \
-        dev4_image_base:1.2 /usr/sbin/init
+        dev4_image_base:latest /usr/sbin/init
 
 sleep   5s
 
