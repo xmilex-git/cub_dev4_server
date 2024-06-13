@@ -30,11 +30,9 @@ sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 
 mkdir -p /home/podman
 
-mkdir -p /home/podman/overlay-images
+mkdir -p /data/overlay-images
 
-mkdir -p /data/podman-images
-
-ln -s /data/podman-images /home/podman/overlay-images
+ln -s /data/overlay-images /home/podman/
 
 sed -i 's|graphroot = "/var/lib/containers/storage"|graphroot = "/home/podman"|' /etc/containers/storage.conf
 
@@ -50,6 +48,6 @@ podman network create \
                 -d ipvlan \
                 -o parent=ens160 \
                 -o mode=l2 \
-                --subnet 192.168.226.0/24 \
-                --gateway 192.168.226.2 \
+                --subnet 192.168.6.0/24 \
+                --gateway 192.168.6.1 \
                 ipv1
