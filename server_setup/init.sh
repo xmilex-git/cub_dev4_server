@@ -36,6 +36,8 @@ ln -s /data/overlay-images /home/podman/
 
 sed -i 's|graphroot = "/var/lib/containers/storage"|graphroot = "/home/podman"|' /etc/containers/storage.conf
 
+systemctl enable podman-restart
+
 podman network create \
                 -d ipvlan \
                 -o parent=eno1np0 \

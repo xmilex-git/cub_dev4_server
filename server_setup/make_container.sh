@@ -53,6 +53,7 @@ podman  run -d \
         --cap-add PERFMON \
         --cap-add SYS_PTRACE \
         --cap-add DAC_OVERRIDE \
+        --restart=always \
         --security-opt seccomp=unconfined \
         dev4_image_base:1.3 /usr/sbin/init
 
