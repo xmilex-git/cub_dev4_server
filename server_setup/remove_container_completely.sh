@@ -18,3 +18,16 @@ VOLUME_NAME_T=${CONTAINER_NAME_T}_volume
 podman stop ${CONTAINER_NAME_T}
 podman rm ${CONTAINER_NAME_T}
 
+UID_T=${IP_D_CLASS}0001
+GID_T=${IP_D_CLASS}0000
+
+GROUPNAME_T=${CONTAINER_NAME_T}_group
+USERNAME_T=${CONTAINER_NAME_T}_user
+
+userdel -r $USERNAME_T
+groupdel $GROUPNAME_T
+
+rm -rf /data/${CONTAINER_NAME_T}
+podman volume rm ${VOLUME_NAME_T}
+
+sed -i "/${IP}/d" /root/ip.txt
