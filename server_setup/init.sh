@@ -44,7 +44,7 @@ podman network create \
                 -o mode=l2 \
                 --subnet 192.168.6.0/24 \
                 --gateway 192.168.6.1 \
-                newnet
+                ipv1
 
 podman network create \
                 -d ipvlan \

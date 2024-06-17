@@ -13,6 +13,7 @@ HOST_NAME_T=$2
 IP="192.168.6.${IP_D_CLASS}"
 
 CONTAINER_NAME_T=${IP_D_CLASS}-${HOST_NAME_T}
+VOLUME_NAME_T=${CONTAINER_NAME_T}_volume
 
 podman stop ${CONTAINER_NAME_T}
 podman rm ${CONTAINER_NAME_T}
@@ -27,5 +28,6 @@ userdel -r $USERNAME_T
 groupdel $GROUPNAME_T
 
 rm -rf /data/${CONTAINER_NAME_T}
+podman volume rm ${VOLUME_NAME_T}
 
 sed -i "/${IP}/d" /root/ip.txt

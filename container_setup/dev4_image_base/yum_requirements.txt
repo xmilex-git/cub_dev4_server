@@ -34,7 +34,6 @@ cockpit
 glibc 
 glibc-static 
 kcachegrind 
-indent 
 lsof 
 man-db 
 man-pages 

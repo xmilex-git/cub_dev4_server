@@ -11,6 +11,7 @@ IP_D_CLASS=$1
 HOST_NAME_T=$2
 
 CONTAINER_NAME_T=${IP_D_CLASS}-${HOST_NAME_T}
+VOLUME_NAME_T=${CONTAINER_NAME_T}_volume
 IP="192.168.6.${IP_D_CLASS}"
 
 UID_T=${IP_D_CLASS}0001
@@ -40,9 +41,11 @@ fi
 echo "${IP}     ${HOST_NAME_T}" >> /root/ip.txt
 
 mkdir   -p /data/${CONTAINER_NAME_T}
+podman  volume create ${VOLUME_NAME_T}
 
 podman  run -d \
         -v /data/${CONTAINER_NAME_T}:/data \
+        -v ${VOLUME_NAME_T}:/home \
         --name ${CONTAINER_NAME_T} \
 	--hostname ${HOST_NAME_T} \
         --network=ipv1 \
@@ -55,9 +58,9 @@ podman  run -d \
         --cap-add DAC_OVERRIDE \
         --restart=always \
         --security-opt seccomp=unconfined \
-        dev4_image_base:1.3 /usr/sbin/init
+        dev4_image_base:1.1 /usr/sbin/init
 
-sleep   5s
+sleep   1s
 
 podman  exec -it ${CONTAINER_NAME_T} /bin/bash /etc/dev4_skeleton/entrypoint.sh cubrid ${UID_T} ${CONTAINER_NAME_T}_group ${GID_T}
 

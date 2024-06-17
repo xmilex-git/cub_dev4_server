@@ -20,12 +20,31 @@ RUN     rm -rf /etc/localtime && \
         ln -s /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
 RUN     mkdir -p /etc/dev4_skeleton
+RUN     mkdir -p /etc/dev4_skeleton/install
 RUN     mkdir -p /data
 
 COPY    .cubrid.sh      /etc/dev4_skeleton/.cubrid.sh
 COPY    .dev4_profile   /etc/dev4_skeleton/.dev4_profile 
 COPY    .gdbinit        /etc/dev4_skeleton/.gdbinit  
 COPY    entrypoint.sh   /etc/dev4_skeleton/entrypoint.sh
+
+RUN     cd /etc/dev4_skeleton && \
+        wget https://download.savannah.gnu.org/releases/texi2html/texi2html-1.82.tar.gz && \
+        tar -zxvf texi2html-1.82.tar.gz && \
+        cd texi2html-1.82 && \
+        ./configure --prefix=/etc/dev4_skeleton/install && \
+        make && make install
+
+RUN     echo 'PATH=/etc/dev4_skeleton/install/bin:${PATH}' >> /etc/bashrc && \
+        source /etc/bashrc
+
+RUN     source /etc/bashrc && \
+        cd /etc/dev4_skeleton && \
+        wget https://ftp.gnu.org/gnu/indent/indent-2.2.11.tar.gz && \
+        tar -zxvf indent-2.2.11.tar.gz && \
+        cd indent-2.2.11 && \
+        ./configure --prefix=/etc/dev4_skeleton/install && \
+        make && make install
 
 RUN     chmod +x /etc/dev4_skeleton/entrypoint.sh
 
