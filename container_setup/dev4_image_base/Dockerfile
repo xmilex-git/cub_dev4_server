@@ -27,6 +27,7 @@ COPY    .cubrid.sh      /etc/dev4_skeleton/.cubrid.sh
 COPY    .dev4_profile   /etc/dev4_skeleton/.dev4_profile 
 COPY    .gdbinit        /etc/dev4_skeleton/.gdbinit  
 COPY    entrypoint.sh   /etc/dev4_skeleton/entrypoint.sh
+COPY    version_up_entrypoint.sh   /etc/dev4_skeleton/version_up_entrypoint.sh
 
 RUN     cd /etc/dev4_skeleton && \
         wget https://download.savannah.gnu.org/releases/texi2html/texi2html-1.82.tar.gz && \
@@ -46,7 +47,8 @@ RUN     source /etc/bashrc && \
         ./configure --prefix=/etc/dev4_skeleton/install && \
         make && make install
 
-RUN     chmod +x /etc/dev4_skeleton/entrypoint.sh
+RUN     chmod +x /etc/dev4_skeleton/entrypoint.sh && \
+        chmod +x /etc/dev4_skeleton/version_up_entrypoint.sh
 
 RUN     sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 

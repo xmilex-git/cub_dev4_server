@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # 인자 개수 확인
-if [ $# -ne 2 ]; then
-  echo "Usage: $0 IP_D_CLASS HOST_NAME_T"
+if [ $# -ne 3 ]; then
+  echo "Usage: $0 IP_D_CLASS HOST_NAME_T IMAGE_V"
   exit 1
 fi
 
 # 변수 할당
 IP_D_CLASS=$1
 HOST_NAME_T=$2
+IMAGE_V=$3
 
 CONTAINER_NAME_T=${IP_D_CLASS}-${HOST_NAME_T}
 VOLUME_NAME_T=${CONTAINER_NAME_T}_volume
@@ -58,7 +59,7 @@ podman  run -d \
         --cap-add DAC_OVERRIDE \
         --restart=always \
         --security-opt seccomp=unconfined \
-        dev4_image_base:1.1 /usr/sbin/init
+        ${IMAGE_V} /usr/sbin/init
 
 sleep   1s
 
