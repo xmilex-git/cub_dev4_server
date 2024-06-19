@@ -45,11 +45,3 @@ podman network create \
                 --subnet 192.168.6.0/24 \
                 --gateway 192.168.6.1 \
                 ipv1
-
-podman network create \
-                -d ipvlan \
-                -o parent=ens160 \
-                -o mode=l2 \
-                --subnet 192.168.6.0/24 \
-                --gateway 192.168.6.1 \
-                ipv1
