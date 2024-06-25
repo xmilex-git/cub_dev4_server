@@ -30,8 +30,7 @@ else
   echo "$USERNAME_T:password" | chpasswd
 fi
 
-# /root/ip.txt에서 특정 IP 주소 검색
-if awk -v ip="$IP" '$1 == ip' /root/ip.txt; then
+if awk -v ip="$IP" '$1 == ip { found=1; exit } END { exit !found }' /root/ip.txt; then
   echo "The IP address ${IP} already exists in /root/ip.txt."
   cat /root/ip.txt
   exit 0
@@ -46,10 +45,10 @@ podman  run -d \
         -v /data/${CONTAINER_NAME_T}:/data \
         -v ${VOLUME_NAME_T}:/home \
         --name ${CONTAINER_NAME_T} \
-	--hostname ${HOST_NAME_T} \
+	      --hostname ${HOST_NAME_T} \
         --network=ipv1 \
         --ip=${IP} \
-        --privileged
+        --privileged \
         --restart=always \
         ${IMAGE_V} /usr/sbin/init
 
