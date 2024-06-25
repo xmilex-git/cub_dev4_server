@@ -24,14 +24,8 @@ podman  run -d \
 	--hostname ${HOST_NAME_T} \
         --network=ipv1 \
         --ip=${IP} \
-        --cap-add AUDIT_CONTROL \
-        --cap-add AUDIT_READ \
-        --cap-add AUDIT_WRITE \
-        --cap-add PERFMON \
-        --cap-add SYS_PTRACE \
-        --cap-add DAC_OVERRIDE \
+        --privileged \
         --restart=always \
-        --security-opt seccomp=unconfined \
         ${NEW_IMAGE_V} /usr/sbin/init
 
 podman  exec -it ${CONTAINER_NAME_T} /bin/bash /etc/dev4_skeleton/version_up_entrypoint.sh cubrid ${UID_T} ${CONTAINER_NAME_T}_group ${GID_T}

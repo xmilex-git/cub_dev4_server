@@ -47,17 +47,11 @@ podman  run -d \
         -v /data/${CONTAINER_NAME_T}:/data \
         -v ${VOLUME_NAME_T}:/home \
         --name ${CONTAINER_NAME_T} \
-	--hostname ${HOST_NAME_T} \
+	      --hostname ${HOST_NAME_T} \
         --network=ipv1 \
         --ip=${IP} \
-        --cap-add AUDIT_CONTROL \
-        --cap-add AUDIT_READ \
-        --cap-add AUDIT_WRITE \
-        --cap-add PERFMON \
-        --cap-add SYS_PTRACE \
-        --cap-add DAC_OVERRIDE \
+        --privileged \
         --restart=always \
-        --security-opt seccomp=unconfined \
         localhost/cubrid_centos7:1 /usr/sbin/init
 
 sleep   1s

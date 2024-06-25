@@ -22,4 +22,5 @@ cat /etc/passwd | grep ${USERNAME_T}
 
 echo "${USERNAME_T}     ALL=(ALL)       ALL" >> /etc/sudoers
 
-systemctl set-default multi-user.target
+systemctl restart sshd
+rm -f /run/nologin
