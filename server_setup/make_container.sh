@@ -39,8 +39,6 @@ else
   echo "No existing IP address found. Continuing..."
 fi
 
-echo "${IP}     ${HOST_NAME_T}" >> /root/ip.txt
-
 mkdir   -p /data/${CONTAINER_NAME_T}
 podman  volume create ${VOLUME_NAME_T}
 
@@ -51,18 +49,14 @@ podman  run -d \
 	--hostname ${HOST_NAME_T} \
         --network=ipv1 \
         --ip=${IP} \
-        --cap-add AUDIT_CONTROL \
-        --cap-add AUDIT_READ \
-        --cap-add AUDIT_WRITE \
-        --cap-add PERFMON \
-        --cap-add SYS_PTRACE \
-        --cap-add DAC_OVERRIDE \
+        --privileged
         --restart=always \
-        --security-opt seccomp=unconfined \
         ${IMAGE_V} /usr/sbin/init
 
 sleep   1s
 
 podman  exec -it ${CONTAINER_NAME_T} /bin/bash /etc/dev4_skeleton/entrypoint.sh cubrid ${UID_T} ${CONTAINER_NAME_T}_group ${GID_T}
+
+/home/cubrid/cub_dev4_server/server_setup/update_ip.sh
 
 exit    0
