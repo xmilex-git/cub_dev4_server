@@ -37,6 +37,13 @@ fi
 PM="dnf"
 have dnf || PM="yum"
 
+# Rocky/RHEL 8 의 기본 repo 에는 gh 가 없으므로 GitHub CLI repo 를 먼저 등록한다.
+if ! rpm -q gh >/dev/null 2>&1 && [ ! -f /etc/yum.repos.d/gh-cli.repo ]; then
+    log_info "registering GitHub CLI repo..."
+    sudo_run "${PM}" install -y dnf-plugins-core
+    sudo_run "${PM}" config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+fi
+
 log_info "checking installed packages..."
 missing=()
 for p in "${PKGS[@]}"; do
