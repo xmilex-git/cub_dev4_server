@@ -27,15 +27,39 @@ else
     npm install -g @anthropic-ai/claude-code
 fi
 
-# --- oh-my-claudecode ---
-# OMC 는 claude 플러그인 마켓플레이스(omc)로 깔리고, 부가 CLI 'omc' 는 npm 패키지로 제공된다.
-# 가장 안전한 방법: 사용자가 claude 안에서 /oh-my-claudecode:omc-setup 한 번 돌리는 것.
-# 여기서는 npm 패키지(omc)만 미리 깔아둔다.
+# --- oh-my-claudecode (npm CLI) ---
+# 실제 `omc` 바이너리는 npm 패키지 `oh-my-claude-sisyphus` 가 제공한다.
+# (`oh-my-claudecode` 라는 동명의 다른 패키지는 별도 도구이므로 혼동 금지.)
+#
+# 네이티브 모듈 (better-sqlite3 12.x) 빌드 요구사항:
+#   - python: 3.7+ (walrus operator 필요) → Rocky 8 시스템 python (3.6.8) 안 됨
+#   - g++:    c++20 지원 → Rocky 8 시스템 gcc 8.5 안 됨, gcc-toolset-13 필요
+# 따라서 python3.11 + gcc-toolset-13 을 명시적으로 사용한다.
 if have omc; then
     log_info "omc already installed: $(omc --version 2>/dev/null || echo '?')"
 else
-    log_info "installing omc (oh-my-claudecode CLI)..."
-    npm install -g oh-my-claudecode || log_warn "omc install failed (you can finish setup inside claude via /oh-my-claudecode:omc-setup)"
+    log_info "installing omc (oh-my-claude-sisyphus CLI)..."
+
+    PYTHON_BIN="$(command -v python3.11 || command -v python3)"
+    log_info "  python: ${PYTHON_BIN}"
+
+    SCL_PREFIX=""
+    if [ -f /opt/rh/gcc-toolset-13/enable ]; then
+        SCL_PREFIX="scl enable gcc-toolset-13 -- "
+        log_info "  toolchain: gcc-toolset-13"
+    elif [ -f /opt/rh/gcc-toolset-12/enable ]; then
+        SCL_PREFIX="scl enable gcc-toolset-12 -- "
+        log_info "  toolchain: gcc-toolset-12"
+    else
+        log_warn "  no gcc-toolset found; native build may fail (need c++20)"
+    fi
+
+    # 이전 시도가 부분 설치를 남겼다면 정리
+    rm -f "$(npm config get prefix)/bin/omc" "$(npm config get prefix)/bin/omc-cli" 2>/dev/null
+    rm -rf "$(npm config get prefix)/lib/node_modules/oh-my-claude-sisyphus" 2>/dev/null
+
+    eval "${SCL_PREFIX}PYTHON='${PYTHON_BIN}' npm install -g oh-my-claude-sisyphus" || \
+        log_warn "omc install failed (you can finish setup inside claude via /oh-my-claudecode:omc-setup)"
 fi
 
 log_info ""

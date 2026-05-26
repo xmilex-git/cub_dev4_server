@@ -38,6 +38,25 @@ cd cub_dev4_server/dev_setup
 03 단계의 `gh auth login` 만 인터랙티브이고, 나머지는 자동입니다.
 중단되면 같은 명령으로 재실행해도 멱등(idempotent)하게 동작합니다.
 
+### `gh auth login` 답변 가이드
+
+| Prompt | 답 |
+|---|---|
+| Where do you use GitHub? | `GitHub.com` |
+| Preferred protocol for Git? | **`SSH`** |
+| Generate a new SSH key? | **`Skip`** (스크립트가 직접 생성/등록) |
+| Authenticate Git with credentials? | `Yes` |
+| How to authenticate? | `Login with a web browser` |
+
+> ⚠️ **중요**: SSH 키 자동 업로드가 동작하려면 토큰에 `admin:public_key`
+> 스코프가 필요합니다. `gh auth login` 시 SSH 프로토콜을 고르면 보통 자동으로
+> 요청되지만, 누락된 경우 다음으로 추가:
+> ```bash
+> gh auth refresh -h github.com -s admin:public_key
+> ```
+> 스코프가 없거나 등록이 실패하면 03 단계가 public key 를 출력하면서
+> https://github.com/settings/ssh/new 에서 수동 등록하는 방법을 안내합니다.
+
 ## 사전 조건
 
 - Rocky/RHEL 8 (`dnf` 사용 가능)

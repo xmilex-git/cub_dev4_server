@@ -44,14 +44,32 @@ ssh-add "${KEY_PATH}" >/dev/null 2>&1 || true
 
 # --- 3) register to GitHub ---
 KEY_TITLE="${KEY_TITLE:-$(whoami)@$(hostname)-$(date +%Y%m%d)}"
+key_registered=0
 if gh ssh-key list 2>/dev/null | grep -qF "$(awk '{print $2}' "${KEY_PATH}.pub")"; then
     log_info "ssh key already registered on GitHub."
+    key_registered=1
 else
     log_info "uploading ssh key to GitHub (title=${KEY_TITLE})..."
-    gh ssh-key add "${KEY_PATH}.pub" --title "${KEY_TITLE}" || {
-        log_warn "gh ssh-key add failed. Add manually:"
-        log_warn "  gh ssh-key add ${KEY_PATH}.pub --title '${KEY_TITLE}'"
-    }
+    if gh ssh-key add "${KEY_PATH}.pub" --title "${KEY_TITLE}" 2>&1; then
+        key_registered=1
+    else
+        log_warn "gh ssh-key add failed."
+        log_warn "이유 후보:"
+        log_warn "  - 토큰에 'admin:public_key' 스코프가 없음"
+        log_warn "    -> 다음 명령으로 스코프 추가 후 재시도:"
+        log_warn "       gh auth refresh -h github.com -s admin:public_key"
+        log_warn "       gh ssh-key add ${KEY_PATH}.pub --title '${KEY_TITLE}'"
+        log_warn ""
+        log_warn "또는 GitHub UI 에서 직접 등록:"
+        log_warn "  1) https://github.com/settings/ssh/new 열기"
+        log_warn "  2) Title: ${KEY_TITLE}"
+        log_warn "  3) Key:   아래 한 줄 전체 복사/붙여넣기"
+        echo
+        echo "===== PUBLIC KEY (paste this) ====="
+        cat "${KEY_PATH}.pub"
+        echo "==================================="
+        echo
+    fi
 fi
 
 # Make sure github.com host key is known and SSH actually works.

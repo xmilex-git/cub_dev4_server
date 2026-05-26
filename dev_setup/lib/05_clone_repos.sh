@@ -58,6 +58,12 @@ for d in "${CUBRID_SRC}" "${TESTCASES_DIR}" "${TESTTOOLS_DIR}"; do
     git -C "${d}" fetch --all --prune --quiet || log_warn "fetch failed in ${d}"
 done
 
+# cubrid 본체는 submodule 이 있다 (cubrid-cci, cubrid-jdbc, cubridmanager).
+# 빌드 전에 init/update 가 필요하므로 여기서 같이 처리한다.
+log_info "initializing cubrid submodules (cubrid-cci, cubrid-jdbc, cubridmanager)..."
+git -C "${CUBRID_SRC}" submodule update --init --recursive || \
+    log_warn "submodule update failed; run manually: git -C ${CUBRID_SRC} submodule update --init --recursive"
+
 log_info "repo layout:"
 for d in "${CUBRID_SRC}" "${TESTCASES_DIR}" "${TESTTOOLS_DIR}"; do
     printf '  %s\n' "${d}"

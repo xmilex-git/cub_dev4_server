@@ -20,6 +20,10 @@ PKGS=(
     clang-tools-extra
     cmake
     ninja-build
+    # better-sqlite3 (omc 의존성) 가 c++20 을 요구하므로 newer gcc 필요.
+    # 시스템 gcc 8.5 와 별도로 toolset 만 깔아두고, omc 설치 때 scl enable 한다.
+    gcc-toolset-13-gcc-c++
+    gcc-toolset-13-libstdc++-devel
     curl
     wget
     rsync
