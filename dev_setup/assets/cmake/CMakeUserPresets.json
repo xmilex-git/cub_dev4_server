@@ -1,0 +1,331 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "user_default",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "/home/cubrid/dev/build_x86_64_${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "$env{CUBRID}",
+        "CMAKE_COLOR_DIAGNOSTICS": "ON",
+        "WITH_CCI": "true"
+      },
+      "environment": { "NINJA_STATUS": "[%f/%t %es]", "CLICOLOR_FORCE": "1" }
+    },
+    {
+      "name": "release_gcc_Ofast",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-Ofast -g -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-Ofast -g -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "release_gcc_O3",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O3 -g -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O3 -g -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "release_gcc",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "release_gcc_avx2",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "FAISS_SIMD_MODE": "AVX2"
+      }
+    },
+    {
+      "name": "release_gcc8_avx2",
+      "description": "##### This is Not possible since faiss AVX2 requires GCC 9 or higher. #####",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -finline-functions",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -finline-functions",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "FAISS_SIMD_MODE": "AVX2"
+      }
+    },
+    {
+      "name": "profile_gcc_avx2",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O2 -g -pg -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -pg -DNDEBUG -finline-functions -Wno-error=mismatched-new-delete",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "FAISS_SIMD_MODE": "AVX2"
+      }
+    },
+    {
+      "name": "profile_gcc",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always -O2 -pg -ggdb3 -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always -O2 -pg -ggdb3",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "debug_gcc",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_DEBUG": "-O0 -ggdb3 -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -ggdb3",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "debug_gcc_23",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_DEBUG": "-O0 -ggdb3 -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -ggdb3",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "sanitize_gcc_23",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_DEBUG": "-O0 -ggdb3 -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration -fsanitize=address,undefined,leak,pointer-subtract,pointer-compare,bounds-strict,integer-divide-by-zero,float-divide-by-zero,float-cast-overflow,shift,signed-integer-overflow,object-size,return,bool,builtin,unreachable,vptr -fno-omit-frame-pointer -fstack-protector-strong -D_FORTIFY_SOURCE=2 -Wfatal-errors",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -ggdb3 -fsanitize=address,undefined,leak,pointer-subtract,pointer-compare,bounds-strict,integer-divide-by-zero,float-divide-by-zero,float-cast-overflow,shift,signed-integer-overflow,object-size,return,bool,builtin,unreachable,vptr -fno-omit-frame-pointer -fstack-protector-strong -D_FORTIFY_SOURCE=2 -Wfatal-errors",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "stack_gcc_23",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_C_FLAGS_DEBUG": "-O0 -ggdb3 -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-implicit-function-declaration -fsanitize=undefined,leak,bounds-strict,integer-divide-by-zero,float-divide-by-zero,float-cast-overflow,shift,signed-integer-overflow,object-size,return,bool,builtin,unreachable,vptr -fno-omit-frame-pointer -fstack-protector-strong -D_FORTIFY_SOURCE=2 -Wfatal-errors",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -ggdb3 -fsanitize=undefined,leak,bounds-strict,integer-divide-by-zero,float-divide-by-zero,float-cast-overflow,shift,signed-integer-overflow,object-size,return,bool,builtin,unreachable,vptr -fno-omit-frame-pointer -fstack-protector-strong -D_FORTIFY_SOURCE=2 -Wfatal-errors",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "debug_clang_O1",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_C_FLAGS": "-fcolor-diagnostics -flto=thin -fno-inline -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fcolor-diagnostics -flto=thin -fno-inline -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration -fdelayed-template-parsing",
+        "CMAKE_C_FLAGS_DEBUG": "-O1 -ggdb3 -fdebug-macro",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O1 -ggdb3 -fdebug-macro"
+      }
+    },
+    {
+      "name": "debug_clang",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_C_FLAGS": "-fcolor-diagnostics -flto=thin -fno-inline -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fcolor-diagnostics -flto=thin -fno-inline -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration -fdelayed-template-parsing",
+        "CMAKE_C_FLAGS_DEBUG": "-O0 -ggdb3 -fdebug-macro -fno-inline",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -ggdb3 -fdebug-macro -fno-inline"
+      }
+    },
+    {
+      "name": "profile_clang",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "WITH_CCI": "true",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_FLAGS": "-fcolor-diagnostics -O2 -pg -ggdb3 -fdebug-macro -flto=thin -fno-inline -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration -Wno-unused-parameter",
+        "CMAKE_CXX_FLAGS": "-fcolor-diagnostics -O2 -pg -ggdb3 -fdebug-macro -flto=thin -fno-inline -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration -Wno-unused-parameter -fdelayed-template-parsing"
+      }
+    },
+    {
+      "name": "profile_clang_23",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "WITH_CCI": "true",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_FLAGS": "-fcolor-diagnostics -O2 -pg -ggdb3 -fdebug-macro -flto=thin -fno-inline -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration",
+        "CMAKE_CXX_FLAGS": "-fcolor-diagnostics -O2 -pg -ggdb3 -fdebug-macro -flto=thin -fno-inline -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration -fdelayed-template-parsing"
+      }
+    },
+    {
+      "name": "release_clang",
+      "inherits": "user_default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "WITH_CCI": "true",
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_FLAGS": "-fcolor-diagnostics -flto=thin -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration -Wno-unused-parameter",
+        "CMAKE_CXX_FLAGS": "-fcolor-diagnostics -flto=thin -Xclang -fno-validate-pch -Xclang -fno-pch-timestamp -Wno-everything -Wno-non-pod-varargs -Wno-c++11-narrowing -Wno-int-conversion -Wno-implicit-function-declaration -Wno-unused-parameter -fdelayed-template-parsing",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -finline-functions",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -finline-functions"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release_gcc_Ofast",
+      "configurePreset": "release_gcc_Ofast"
+    },
+    {
+      "name": "release_gcc_O3",
+      "configurePreset": "release_gcc_O3"
+    },
+    {
+      "name": "release_gcc",
+      "configurePreset": "release_gcc"
+    },
+    {
+      "name": "release_gcc_avx2",
+      "configurePreset": "release_gcc_avx2"
+    },
+    {
+      "name": "release_gcc8_avx2",
+      "configurePreset": "release_gcc8_avx2"
+    },
+    {
+      "name": "profile_gcc_avx2",
+      "configurePreset": "profile_gcc_avx2"
+    },
+    {
+      "name": "debug_gcc",
+      "configurePreset": "debug_gcc"
+    },
+    {
+      "name": "debug_clang",
+      "configurePreset": "debug_clang"
+    },
+    {
+      "name": "debug_clang_O1",
+      "configurePreset": "debug_clang_O1"
+    },
+    {
+      "name": "debug_gcc_23",
+      "configurePreset": "debug_gcc_23"
+    },
+    {
+      "name": "sanitize_gcc_23",
+      "configurePreset": "sanitize_gcc_23"
+    },
+    {
+      "name": "stack_gcc_23",
+      "configurePreset": "stack_gcc_23"
+    },
+    {
+      "name": "profile_clang",
+      "configurePreset": "profile_clang"
+    },
+    {
+      "name": "profile_clang_23",
+      "configurePreset": "profile_clang_23"
+    },
+    {
+      "name": "release_clang",
+      "configurePreset": "release_clang"
+    },
+    {
+      "name": "profile_gcc",
+      "configurePreset": "profile_gcc"
+    }
+  ]
+}

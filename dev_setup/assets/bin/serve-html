@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# serve-html: live-server a single HTML file in an isolated tmp dir.
+# Ctrl+C stops the server AND removes the tmp dir.
+#
+# Usage:
+#   serve-html <html-file> [port]
+#
+# Env:
+#   HOST  bind address (default 0.0.0.0)
+
+set -euo pipefail
+
+usage() {
+  cat <<EOF >&2
+Usage: $(basename "$0") <html-file> [port]
+
+  html-file   Path to the HTML file to serve.
+  port        TCP port to bind (default 8765).
+
+Env:
+  HOST        Bind address (default 0.0.0.0).
+EOF
+  exit 2
+}
+
+[[ $# -ge 1 ]] || usage
+case "${1:-}" in -h|--help) usage ;; esac
+
+HTML="$(readlink -f -- "$1")"
+[[ -f "$HTML" ]] || { echo "[serve-html] not a file: $HTML" >&2; exit 1; }
+
+PORT="${2:-8765}"
+HOST="${HOST:-0.0.0.0}"
+
+BASENAME="$(basename -- "$HTML")"
+SERVE_DIR="$(mktemp -d -t serve-html.XXXXXX)"
+PID_FILE="$SERVE_DIR/.live-server.pid"
+
+cleanup() {
+  trap - INT TERM EXIT
+  local pid=""
+  [[ -f "$PID_FILE" ]] && pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.2
+    done
+    kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+  fi
+  rm -rf -- "$SERVE_DIR"
+  echo "[serve-html] cleaned up $SERVE_DIR"
+}
+trap cleanup INT TERM EXIT
+
+ln -s "$HTML" "$SERVE_DIR/index.html"
+[[ "$BASENAME" != "index.html" ]] && ln -s "$HTML" "$SERVE_DIR/$BASENAME"
+
+echo "[serve-html] file    : $HTML"
+echo "[serve-html] tmp dir : $SERVE_DIR"
+echo "[serve-html] URL     : http://$HOST:$PORT/  (entry: $BASENAME)"
+echo "[serve-html] watch   : $HTML"
+echo "[serve-html] Ctrl+C to stop."
+
+cd "$SERVE_DIR"
+
+npx --yes live-server \
+  --host="$HOST" \
+  --port="$PORT" \
+  --no-browser \
+  --entry-file=index.html \
+  --watch="$HTML" \
+  . &
+echo $! > "$PID_FILE"
+
+wait "$(cat "$PID_FILE")" 2>/dev/null || true
