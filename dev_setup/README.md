@@ -14,6 +14,7 @@ dev4 베이스 이미지(Rocky 8) 위에서, 새 컨테이너/서버에 본 사�
 | 05 | `05_clone_repos.sh` | `~/dev/cubrid`, `~/cubrid-testcases`, `~/cubrid-testtools` SSH clone + fork remote(`xmilex`) 등록 |
 | 06 | `06_install_bin.sh` | `~/bin/` 의 모든 셸 스크립트 (`build_cubrid.sh`, `ctp_test.sh`, ...) 설치 |
 | 07 | `07_install_cmake_presets.sh` | `~/dev/cubrid/CMakeUserPresets.json` 배치 (clang preset 정의) |
+| 08 | `08_install_global_claude_md.sh` | 전역 `~/.claude/CLAUDE.md` 에 공통 규칙(scratch/임시파일 위치 등)을 marked block 으로 주입 (기존 내용 보존) |
 | 09 | `09_install_claude_skills.sh` | `~/dev/cubrid/.claude/` 의 `CLAUDE.md`, `hooks/`, `skills/` 마이그레이션 |
 
 ## 사용법
@@ -137,12 +138,13 @@ dev_setup/
 │   ├── 05_clone_repos.sh
 │   ├── 06_install_bin.sh
 │   ├── 07_install_cmake_presets.sh
+│   ├── 08_install_global_claude_md.sh
 │   └── 09_install_claude_skills.sh
 └── assets/
     ├── bin/                  # ~/bin 에 깔릴 셸 스크립트들 (스냅샷)
     ├── dotfiles/             # .dev4_profile, .cubrid.sh, claude-account.sh
     ├── cmake/                # CMakeUserPresets.json
-    └── claude/               # CLAUDE.md, hooks/, skills/
+    └── claude/               # CLAUDE.md, hooks/, skills/, global-rules.md
 ```
 
 ## 멱등성/안전성 노트

@@ -26,6 +26,7 @@ STEPS=(
     "05_clone_repos"
     "06_install_bin"
     "07_install_cmake_presets"
+    "08_install_global_claude_md"
     "09_install_claude_skills"
 )
 
