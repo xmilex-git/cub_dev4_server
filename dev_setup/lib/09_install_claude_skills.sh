@@ -5,7 +5,7 @@
 #   - CLAUDE.md
 #   - hooks/   (codestyle-precommit.sh 등)
 #   - skills/  (cubrid-build, cubrid-ctp, cubrid-flow, cubrid-pr-review,
-#              cubrid-server, omc-reference)
+#              cubrid-server)
 
 set -euo pipefail
 source "${DEV_SETUP_DIR}/lib/00_common.sh"

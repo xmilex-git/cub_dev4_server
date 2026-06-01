@@ -64,7 +64,7 @@ exit 2
 
 | 출력 | 의미 | 다음 단계 |
 |------|------|-----------|
-| `OK GREEN` | 모든 check pass | 리뷰 단계로(`pr-review-loop` 등) |
+| `OK GREEN` | 모든 check pass | 리뷰 단계로(`cubrid-pr-review` 등) |
 | `FAIL ... shell-test` | shell 카테고리 NOK | `cubrid-tc-sync` 또는 코드 수정 후 재 `run` |
 | `FAIL ... sql-medium-test` | 9.1 동기화 누락 | 동일 — `cubrid-tc-sync` 사용 |
 | `FAIL ... build` | 빌드 실패 (드물게) | 로컬 `cubrid-build` 로 재현 → 수정 후 push |
@@ -81,5 +81,5 @@ exit 2
 
 ## 후속 작업 가이드
 
-- GREEN → 리뷰 대응 단계 (`pr-review-loop` 등록 가능).
+- GREEN → 리뷰 대응 단계 (`cubrid-pr-review` 호출 가능).
 - FAIL → 카테고리별 수정 후 본 skill 재호출. cubrid-flow 가 자동 재실행 루프를 가질지는 별도 정책 (기본은 사용자 confirm).

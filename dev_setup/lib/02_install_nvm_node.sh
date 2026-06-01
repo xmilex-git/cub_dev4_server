@@ -1,7 +1,7 @@
 #!/bin/bash
-# 02_install_nvm_node.sh - nvm + node 설치 (npx 사용 위해)
+# 02_install_nvm_node.sh - nvm + node + claude CLI 설치
 #
-# oh-my-claudecode / claude CLI 설치에 npm/npx 필요.
+# claude CLI 설치에 npm/npx 필요.
 # 시스템 nodejs 대신 nvm 으로 깔아서 사용자 영역에 격리한다.
 
 set -euo pipefail
@@ -34,3 +34,11 @@ nvm use default >/dev/null
 log_info "node:  $(node --version)"
 log_info "npm:   $(npm --version)"
 log_info "npx:   $(npx --version)"
+
+# --- claude CLI ---
+if have claude; then
+    log_info "claude already installed: $(claude --version 2>/dev/null || echo '?')"
+else
+    log_info "installing @anthropic-ai/claude-code..."
+    npm install -g @anthropic-ai/claude-code
+fi

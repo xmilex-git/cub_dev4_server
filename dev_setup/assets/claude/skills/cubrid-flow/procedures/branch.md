@@ -26,7 +26,7 @@
 - `csql.access`, `csql.err` (csql runtime 파일)
 - `ctpout.txt` (CTP regression 출력)
 
-위 파일들은 **stash → branch ops → pop** 패턴으로 step 4-5 에서 보존되며, step 6 (구현) / step 9.2 (디버깅) / step 11 (테스트 수정) dispatch 시 agent / team 에게 "**아래 파일들은 절대 git add / git commit 대상 아님**" directive 를 명시 전달해야 함. 새 untracked 파일이 추가되면 이 목록도 갱신.
+위 파일들은 **stash → branch ops → pop** 패턴으로 step 4-5 에서 보존되며, step 6 (구현) / step 9.2 (디버깅) / step 11 (테스트 수정) 의 에이전트 dispatch 시 각 에이전트 프롬프트에 "**아래 파일들은 절대 git add / git commit 대상 아님**" directive 를 명시 전달해야 함. 새 untracked 파일이 추가되면 이 목록도 갱신.
 
 ## 사전 검증
 

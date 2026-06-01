@@ -6,8 +6,8 @@
 ## 입력 / 출력
 
 **입력 (둘 중 하나, 우선순위 순)**
-1. `.omc/ssot/<KEY>.md` — 명시적 SSOT (보통 `oh-my-claudecode:deep-interview` 산출물)
-2. `.omc/plans/<KEY>.md` — `oh-my-claudecode:plan` 산출물
+1. `.omc/ssot/<KEY>.md` — 명시적 SSOT (보통 step 1 SSOT 인터뷰 산출물)
+2. `.omc/plans/<KEY>.md` — step 2 plan 산출물
 3. 사용자가 대화창에 직접 붙여넣은 spec/리뷰 문서
 
 **출력 (반드시 3개 모두)**

@@ -64,8 +64,8 @@ PR 번호가 빠지면 한 번 묻고 진행한다.
 
 Rule 1 은 **나머지 모든 룰의 사전 컨텍스트** 이므로 먼저 단독으로 돌린다.
 
-- Agent: `Agent(subagent_type="oh-my-claudecode:architect", model="opus")`
-  (read-only, codebase 이해 전문)
+- Agent: `Agent(subagent_type="general-purpose", model="opus")`
+  프롬프트에 "read-only codebase 이해 전문가 (architect) 역할 — 코드를 수정하지 말고 변경 전 동작/invariant 만 정리" 를 명시해 역할을 부여한다.
 - 입력으로 전달:
   - PR 메타 + diff + 변경 파일 목록
   - `.claude/code-review.md` 의 Rule 1 본문
@@ -85,17 +85,17 @@ Rule 1 은 **나머지 모든 룰의 사전 컨텍스트** 이므로 먼저 단�
 공유되는 입력은 (a) PR 메타/diff, (b) Rule 1 baseline, (c) 본인이 담당하는 룰 본문, (d) `voice-guide.md`. 네 가지뿐.
 서로의 발견을 읽지 못하므로 **중복/충돌은 의도된 설계** — lead 가 Phase 3 에서 자연어로 녹여낸다.
 
-병렬로 단일 메시지에서 7개 `Agent` 호출을 동시에 송신한다. 각 에이전트는 자기 결과를 `.omc/cubrid-pr-review/<PR>/rule<N>-<lane>.md` 에 저장하도록 지시.
+병렬로 단일 메시지에서 7개 `Agent` 호출을 동시에 송신한다. 모든 lane 은 네이티브 `subagent_type="general-purpose"` 로 띄우고, 아래 "역할 (inline 지침)" 컬럼의 전문가 페르소나 + "초점" 을 **프롬프트에 직접 inline** 해 역할을 부여한다. 각 에이전트는 자기 결과를 `.omc/cubrid-pr-review/<PR>/rule<N>-<lane>.md` 에 저장하도록 지시.
 
-| Rule | Lane | Agent (subagent_type) | 모델 | 초점 |
-|------|------|------------------------|------|------|
-| 2 | behavior | `oh-my-claudecode:code-reviewer` | opus | 동작 변화, spec 정합성, SA/CS/SERVER 영향, error/abort 경로 |
-| 3 | convention | `oh-my-claudecode:code-reviewer` | sonnet | 주석/네이밍/indent/include 순서/`memory_wrapper.hpp` LAST/`_FILENAME_H_` 가드/`free_and_init` |
-| 4 | integration | `oh-my-claudecode:critic` | opus | 최소 변경, 기존 모듈과의 통합, shadow subsystem 여부, 죽은 코드 |
-| 5 | safety | `oh-my-claudecode:security-reviewer` | opus | race / lock ordering / buffer overflow / integer overflow / UAF / uninitialized |
-| 6 | error | `oh-my-claudecode:code-reviewer` | sonnet | `er_set` + return-code 일치, 자원 해제, 새 error code 6-place 프로토콜 |
-| 7 | test | `oh-my-claudecode:test-engineer` | sonnet | unit_tests/ + CTP 커버리지 적정성, 엣지/concurrency repro |
-| 8 | spec | `oh-my-claudecode:critic` | sonnet | PR description / JIRA 의 명시적 요구사항 위반 / 누락 |
+| Rule | Lane | subagent_type | 역할 (inline 지침) | 모델 | 초점 |
+|------|------|---------------|--------------------|------|------|
+| 2 | behavior | `general-purpose` | 코드 리뷰어 | opus | 동작 변화, spec 정합성, SA/CS/SERVER 영향, error/abort 경로 |
+| 3 | convention | `general-purpose` | 코드 리뷰어 (컨벤션) | sonnet | 주석/네이밍/indent/include 순서/`memory_wrapper.hpp` LAST/`_FILENAME_H_` 가드/`free_and_init` |
+| 4 | integration | `general-purpose` | 통합/설계 비평가 (critic) | opus | 최소 변경, 기존 모듈과의 통합, shadow subsystem 여부, 죽은 코드 |
+| 5 | safety | `general-purpose` | 보안/안전성 리뷰어 | opus | race / lock ordering / buffer overflow / integer overflow / UAF / uninitialized |
+| 6 | error | `general-purpose` | 코드 리뷰어 (에러 핸들링) | sonnet | `er_set` + return-code 일치, 자원 해제, 새 error code 6-place 프로토콜 |
+| 7 | test | `general-purpose` | 테스트 엔지니어 | sonnet | unit_tests/ + CTP 커버리지 적정성, 엣지/concurrency repro |
+| 8 | spec | `general-purpose` | 스펙 비평가 (critic) | sonnet | PR description / JIRA 의 명시적 요구사항 위반 / 누락 |
 
 각 에이전트의 **내부 산출물** 스키마 (`.omc/cubrid-pr-review/<PR>/rule<N>-<lane>.md`) — 이 파일은 사용자에게 직접 노출되지 않고 lead 가 통합용으로 읽는다. 따라서 정렬을 위한 메타 필드는 유지하되, 본문은 사람 톤으로 작성한다:
 
@@ -209,6 +209,7 @@ PR #<번호> — <PR 제목> 읽어봤습니다.
 각 lane 에이전트에 전달할 프롬프트는 다음을 포함한다 (그대로 복붙 가능한 골격):
 
 ```
+You act as a <역할 (inline 지침) — e.g. 보안/안전성 리뷰어, 코드 리뷰어, 테스트 엔지니어>.
 You are reviewing CUBRID PR #<N> under Rule <K> of .claude/code-review.md.
 You are isolated from other rule lanes — DO NOT speculate about other lanes' findings.
 Report ONLY findings that fall under Rule <K>. If something matters but belongs to

@@ -26,7 +26,6 @@ STEPS=(
     "05_clone_repos"
     "06_install_bin"
     "07_install_cmake_presets"
-    "08_install_omc"
     "09_install_claude_skills"
 )
 

@@ -6,7 +6,9 @@ disable-model-invocation: true
 
 # cubrid-flow
 
-CUBRID 개발 13단계 프로세스의 마스터. 각 단계의 상태를 `.omc/state/cubrid-flow/<KEY>.json` 으로 추적하고, 단계별로 적절한 절차서(`procedures/<name>.md`) / OMC skill / agent 로 라우팅한다.
+CUBRID 개발 13단계 프로세스의 마스터. 각 단계의 상태를 `.omc/state/cubrid-flow/<KEY>.json` 으로 추적하고, 단계별로 적절한 절차서(`procedures/<name>.md`) / 로컬 skill / 네이티브 `Agent` 로 라우팅한다.
+
+> **에이전트 모델**: 이 skill 은 OMC(oh-my-claudecode) 없이 Claude Code 네이티브 기능만으로 동작한다. 모든 에이전트 dispatch 는 네이티브 `Agent(subagent_type="general-purpose")` 를 쓰고, 역할(planner / architect / executor / debugger / verifier / tracer / code-reviewer / test-engineer / critic 등) 은 **프롬프트에 직접 inline** 해 부여한다. 코드베이스 검색은 네이티브 `Explore`, 계획 수립은 네이티브 `Plan` 에이전트를 써도 된다. "team" 이 필요한 멀티-책임 작업은 복수 general-purpose 에이전트를 병렬로 띄워 lead 가 종합한다.
 
 이 skill 은 **사용자 명시 호출**(`/cubrid-flow`, "cubrid 작업 시작" 등)에서만 진입한다. 자동 트리거는 frontmatter `disable-model-invocation: true` 로 비활성.
 
@@ -30,29 +32,29 @@ CUBRID 개발 13단계 프로세스의 마스터. 각 단계의 상태를 `.omc/
 - 외부 send 의 결과 보고 (성공 / 실패) — 실패 시 디버깅 자동 진입 (사용자 입력 없이 patch 후 재시도)
 
 **보존 대상 파일 (절대 커밋 금지)**
-`procedures/branch.md` § "보존 대상 파일 패턴" 참조 — `.gitignore` / `cubrid-cci` (M) + `CMakeUserPresets.json` / `csql.access` / `csql.err` / `ctpout.txt` (??). 모든 step 6 / 9.2 / 11 dispatch 시 agent / team 에 이 목록 inject.
+`procedures/branch.md` § "보존 대상 파일 패턴" 참조 — `.gitignore` / `cubrid-cci` (M) + `CMakeUserPresets.json` / `csql.access` / `csql.err` / `ctpout.txt` (??). 모든 step 6 / 9.2 / 11 의 에이전트 dispatch 시 이 목록을 프롬프트에 inject.
 
 ## 13단계 매핑
 
 | # | 단계 | 호출 |
 |---|------|------|
-| 1 | SSOT 작성 | `Skill(skill="oh-my-claudecode:deep-interview")` — Socratic 인터뷰 후 `.omc/ssot/<KEY>.md` 산출 |
-| 2 | 스펙/구현 계획 | task 복잡도로 dispatch — 단순/단일 모듈: `Skill(skill="oh-my-claudecode:omc-plan")` (=`oh-my-claudecode:plan`). 멀티파일 리팩터/레이어 이동/아키텍처 트레이드오프: `Skill(skill="oh-my-claudecode:ralplan")` 으로 planner+architect+critic 합의 루프. 단일 agent 만으로 충분하면 `Agent(subagent_type="oh-my-claudecode:planner")` 로도 가능. 매핑 디테일은 ↓ "step 2 plan dispatch 가이드". 산출: `.omc/plans/<KEY>.md` |
+| 1 | SSOT 작성 | lead 가 직접 Socratic 인터뷰 진행 (사용자와 대화) 후 `.omc/ssot/<KEY>.md` 산출 |
+| 2 | 스펙/구현 계획 | task 복잡도로 dispatch — 단순/단일 모듈: 네이티브 `Agent(subagent_type="Plan")` 또는 lead 직접 계획. 멀티파일 리팩터/레이어 이동/아키텍처 트레이드오프: planner / architect / critic 역할의 general-purpose 에이전트 병렬 dispatch 후 lead 합의 종합. 매핑 디테일은 ↓ "step 2 plan dispatch 가이드". 산출: `.omc/plans/<KEY>.md` |
 | 3 | JIRA 티켓 발행 | `procedures/jira.md` (`create`) |
 | 4 | origin/develop pull | `procedures/branch.md` (1단계) |
 | 5 | xmilex 브랜치 생성/push | `procedures/branch.md` (2단계) |
-| 6 | 구현 | **plan §"Step 6 Dispatch Recommendation" 무조건 따름** (사용자 override 없으면 confirm 없이 진행). plan 권고 없는 경우의 default — 단순/단일책임: `Agent(subagent_type="oh-my-claudecode:executor")`. 아키텍처/멀티파일 리팩토링/큰 변경/레이어 이동: `Skill(skill="oh-my-claudecode:team")` (opus, architect+executor+code-reviewer). 어느 dispatch 든 "보존 대상 파일 (procedures/branch.md)" inject 필수. 빌드는 `cubrid-build` skill |
+| 6 | 구현 | **plan §"Step 6 Dispatch Recommendation" 무조건 따름** (사용자 override 없으면 confirm 없이 진행). plan 권고 없는 경우의 default — 단순/단일책임: `Agent(subagent_type="general-purpose")` 에 executor 역할 inline. 아키텍처/멀티파일 리팩토링/큰 변경/레이어 이동: architect+executor+code-reviewer 역할의 general-purpose 에이전트 병렬 dispatch (opus). 어느 dispatch 든 "보존 대상 파일 (procedures/branch.md)" inject 필수. 빌드는 `cubrid-build` skill |
 | 7a | PR/JIRA 본문 준비 | `procedures/pr-prep.md` (~/.cache/cubrid-pr/<KEY>/ 채움) |
 | 7b | PR 생성 | `procedures/pr.md` (`create`) |
 | 8 | PR/JIRA 본문 동기화 | `procedures/pr.md` 가 자동 수행 |
 | 8.5 | **feature 동작 검증 (smoke test)** | `procedures/smoke-test.md` — 본 PR 에서 도입/수정한 기능을 실 query/시나리오로 호출해 정상 동작 확인. CTP 진입 전 게이트. cubrid-server start → csql 또는 직접 실행 → 결과 sanity check → cubrid-server stop. **CTP 보다 먼저 돌려서 회귀 매트릭스의 정상 진입로를 좁힌다.** |
 | 9 | ctp.sh sql medium | `cubrid-ctp` skill |
 | 9.1 | TC 답안 업데이트 | `procedures/tc-sync.md` (sql/medium 라우팅) |
-| 9.2 | 코드 오류 수정 | NOK 단순: `Agent(subagent_type="oh-my-claudecode:debugger")`. CORE_DUMP / 분석 필요: tracer→debugger→executor→verifier 조합 또는 `Skill(skill="oh-my-claudecode:team")` (opus). 빌드는 `cubrid-build` skill |
+| 9.2 | 코드 오류 수정 | NOK 단순: `Agent(subagent_type="general-purpose")` 에 debugger 역할 inline. CORE_DUMP / 분석 필요: tracer→debugger→executor→verifier 역할을 순차/병렬 general-purpose 에이전트로 (opus). 빌드는 `cubrid-build` skill |
 | 10 | `/run all` 트리거 | `procedures/ci.md` (`run`) |
-| 11 | shell test 수정 | testcase 단독 수정: `Agent(subagent_type="oh-my-claudecode:test-engineer")` 또는 `qa-tester`. 코드+testcase 동시: debugger+executor 조합 또는 `Skill(skill="oh-my-claudecode:team")`. 그 후 `procedures/tc-sync.md` (shell 라우팅) |
+| 11 | shell test 수정 | testcase 단독 수정: `Agent(subagent_type="general-purpose")` 에 test-engineer / qa-tester 역할 inline. 코드+testcase 동시: debugger+executor 역할 병렬 dispatch. 그 후 `procedures/tc-sync.md` (shell 라우팅) |
 | 12 | `/run all` 재트리거 + 그린 대기 | `procedures/ci.md` (`run` + `watch`) |
-| 13 | 리뷰 대응 | `pr-review-loop` skill |
+| 13 | 리뷰 대응 | `cubrid-pr-review` skill |
 
 **절차서 호출 규약**: `procedures/<name>.md` 가 가리키는 단계는 lead 가 해당 파일을 `Read` 한 뒤 본문의 "실행 절차" 를 그대로 수행한다 (별도 sub-skill 등록 없음 — 본문이 곧 절차). 자주 쓰여 자동 트리거가 유용한 `cubrid-build` / `cubrid-ctp` / `cubrid-server` 만 외부 top-level skill 로 유지하고, 나머지(`jira` / `branch` / `pr-prep` / `pr` / `tc-sync` / `ci`) 는 `procedures/` 로 흡수해 description 예산을 절약했다.
 
@@ -62,7 +64,7 @@ CUBRID 개발 13단계 프로세스의 마스터. 각 단계의 상태를 `.omc/
 
 | 실패 지점 | 분류 | 1차 회귀 | 비고 |
 |----------|------|---------|------|
-| 2 (plan) | SSOT 모호/모순 발견 | → 1 (SSOT 보강) → 2 | deep-interview 재호출 |
+| 2 (plan) | SSOT 모호/모순 발견 | → 1 (SSOT 보강) → 2 | lead 가 인터뷰 재진행 |
 | 6 (구현) | 빌드 실패 (컴파일/링크) | → 6 재시도 | executor agent 자체 수정. 같은 에러 3회 → 사용자 escalate |
 | 6 (구현) | plan 단계 누락/모순 발견 | → 2 (plan 수정) → 6 | plan 갱신 후 재구현 |
 | 6 (구현) | SSOT 자체 모순/요구 충돌 | → 1 (SSOT) → 2 → 6 | 드물지만 critical. 사용자 명시 confirm |
@@ -145,10 +147,10 @@ jq '.steps' "$STATE"
 
 1. 현재 단계 읽기 (`jq .current_step "$STATE"`)
 2. 해당 단계의 진입 조건 검증
-3. 매핑된 절차서/OMC skill/agent 호출:
+3. 매핑된 절차서/skill/agent 호출:
    - **절차서 호출**: `Read .claude/skills/cubrid-flow/procedures/<name>.md` 후 본문의 "실행 절차" 수행
-   - **OMC skill**: `Skill(skill="oh-my-claudecode:deep-interview")` 등 외부 skill 직접 호출
-   - **agent dispatch**: `Agent(subagent_type="oh-my-claudecode:executor", prompt="...")` (구현/디버그 단계)
+   - **로컬 skill**: `Skill(skill="cubrid-build")` / `cubrid-ctp` / `cubrid-server` / `cubrid-pr-review` 직접 호출
+   - **agent dispatch**: `Agent(subagent_type="general-purpose", prompt="...")` — 프롬프트에 역할(executor/debugger 등) inline (구현/디버그 단계)
    - **사람 단계**: SSOT 작성, 머지 결정 등 — 사용자에게 명시적으로 "manual" 알림
 4. 결과를 받아 `.omc/state/cubrid-flow/<KEY>.json` 의 `steps.<N>.{status,ts,...}` 갱신 (atomic write — `mv tmp.json target.json`)
 5. `current_step` 증가
@@ -160,39 +162,43 @@ jq '.steps' "$STATE"
 | 단계 dispatch | 도구 |
 |--------------|------|
 | 절차서 호출 | `Read` (`.claude/skills/cubrid-flow/procedures/<name>.md`) — 본문의 절차 그대로 수행 |
-| OMC skill 호출 | `Skill` (예: `oh-my-claudecode:deep-interview`, `oh-my-claudecode:plan`, `pr-review-loop`) |
-| agent dispatch (단일) | `Agent` 도구, `subagent_type` 으로 OMC agent 선택. catalog 는 `omc-reference` skill 의 "Agent Catalog" 참조. `model` 은 **lead 가 task 복잡도로 판단** — 단순/반복은 sonnet, 아키텍처·멀티파일 리팩토링·심층 디버깅은 opus, 모르면 생략(agent 기본값) |
-| agent dispatch (멀티) | `Skill(skill="oh-my-claudecode:team")` — 멀티-책임 task (architect+executor+code-reviewer, tracer+debugger+executor+verifier 등) 를 한 번에 분담. 단일 agent 로 처리 불가능한 큰 변경에만 사용 (실패 시 디버깅 비용 큼) |
+| 로컬 skill 호출 | `Skill` (예: `cubrid-build`, `cubrid-ctp`, `cubrid-server`, `cubrid-pr-review`) |
+| agent dispatch (단일) | `Agent(subagent_type="general-purpose")`, 역할은 프롬프트에 inline (역할 목록은 ↓ "agent dispatch 가이드"). 검색은 네이티브 `Explore`, 계획은 `Plan` 사용 가능. `model` 은 **lead 가 task 복잡도로 판단** — 단순/반복은 sonnet, 아키텍처·멀티파일 리팩토링·심층 디버깅은 opus, 모르면 생략(agent 기본값) |
+| agent dispatch (멀티) | 복수 `Agent(subagent_type="general-purpose")` 를 한 메시지에서 병렬 dispatch — 멀티-책임 task (architect+executor+code-reviewer, tracer+debugger+executor+verifier 등) 를 역할별로 분담하고 lead 가 결과 종합. 단일 agent 로 처리 불가능한 큰 변경에만 사용 (실패 시 디버깅 비용 큼) |
 | bash 실행 | `Bash`, 빌드/CTP 같은 long-running 은 `run_in_background: true` |
 | 상태 파일 update | `Read`/`Write` (mtime 충돌 시 사용자 알림) |
 
 ## 구현/디버깅 단계의 agent dispatch 가이드 (6 / 9.2 / 11)
 
-OMC agent catalog 는 `omc-reference` skill 의 "Agent Catalog" 섹션에 등재 — `explore` / `analyst` / `planner` / `architect` / `debugger` / `executor` / `verifier` / `tracer` / `security-reviewer` / `code-reviewer` / `test-engineer` / `designer` / `writer` / `qa-tester` / `scientist` / `document-specialist` / `git-master` / `code-simplifier` / `critic`.
+모든 dispatch 는 네이티브 `Agent(subagent_type="general-purpose")` 로 띄우고, 아래 **역할 페르소나** 중 하나를 프롬프트 첫 줄에 inline 해 부여한다 (OMC agent 카탈로그를 네이티브로 대체한 것):
 
-dispatch 패턴은 단일 agent vs `oh-my-claudecode:team` 둘 중 하나:
+`explore` / `analyst` / `planner` / `architect` / `debugger` / `executor` / `verifier` / `tracer` / `security-reviewer` / `code-reviewer` / `test-engineer` / `designer` / `writer` / `qa-tester` / `scientist` / `document-specialist` / `git-master` / `code-simplifier` / `critic`.
+
+> 검색 중심 작업은 네이티브 `Agent(subagent_type="Explore")`, 계획 수립은 네이티브 `Agent(subagent_type="Plan")` 으로 대체해도 된다.
+
+dispatch 패턴은 단일 agent vs 병렬 멀티 agent 둘 중 하나:
 
 | 패턴 | 적용 시점 | 호출 |
 |------|----------|------|
-| **단일 agent** | task 가 한 책임 안에 떨어짐 | `Agent(subagent_type="oh-my-claudecode:<role>")` |
-| **team 분담** | 멀티 책임 / 검증 분리 / 큰 변경 | `Skill(skill="oh-my-claudecode:team")` 으로 task 분산 — agent 조합 자동 라우팅 |
+| **단일 agent** | task 가 한 책임 안에 떨어짐 | `Agent(subagent_type="general-purpose")` + 역할 페르소나 inline |
+| **병렬 분담** | 멀티 책임 / 검증 분리 / 큰 변경 | 한 메시지에서 복수 `Agent(subagent_type="general-purpose")` 를 역할별로 동시 dispatch, lead 가 결과 종합 |
 
-자주 쓰는 매핑 (full catalog 는 `omc-reference`):
+자주 쓰는 매핑 (역할은 프롬프트에 inline):
 
 - **6단계 (구현)**
   - 단순/패턴화 (sonnet): `executor`
   - 미지의 영역 (sonnet): `explore` → `planner` → `executor` → `verifier`
-  - 아키텍처 / 멀티파일 리팩토링 (opus): `team` 으로 `architect` + `executor` + `code-reviewer`
+  - 아키텍처 / 멀티파일 리팩토링 (opus): `architect` + `executor` + `code-reviewer` 병렬 분담
   - 보안 민감 변경: 위 조합 + `security-reviewer`
 - **9.2단계 (CTP NOK / CORE_DUMP 코드 수정)**
   - NOK 단순 (sonnet): `debugger` 단독 → `executor`
   - NOK 어려움 (opus): `tracer` 로 evidence → `debugger` → `executor` → `verifier`
-  - CORE_DUMP (opus, team 권장): `tracer` + `debugger` + `executor` + `verifier`
+  - CORE_DUMP (opus, 병렬 권장): `tracer` + `debugger` + `executor` + `verifier`
 - **11단계 (shell test 실패)**
   - testcase expected 만 갱신: `qa-tester` 또는 `test-engineer`
-  - 코드 + testcase 동시: `debugger` + `executor`, 큰 변경이면 `team`
+  - 코드 + testcase 동시: `debugger` + `executor`, 큰 변경이면 병렬 분담
 
-**team 사용 가이드**: 단일 agent 의 책임 범위를 넘어가는 경우(설계+구현+리뷰 동시, tracing+debugging+verification 동시) 만 `team` 사용. 우선 단일 agent 로 시도 → 부족하면 escalation. team 은 실패 시 디버깅 비용이 크고 토큰 소모도 많음.
+**병렬 분담 가이드**: 단일 agent 의 책임 범위를 넘어가는 경우(설계+구현+리뷰 동시, tracing+debugging+verification 동시) 만 복수 에이전트로 분담. 우선 단일 agent 로 시도 → 부족하면 escalation. 병렬 분담은 실패 시 디버깅 비용이 크고 토큰 소모도 많음.
 
 ## step 2 plan dispatch 가이드
 
@@ -200,24 +206,24 @@ step 2 의 dispatch 는 **plan task 의 복잡도 + 합의 가치** 로 결정:
 
 | 패턴 | 적용 시점 | 호출 |
 |------|----------|------|
-| **단일 skill** (omc-plan) | 단일 모듈 / 단일 책임 / SSOT 가 이미 거의 plan 수준 | `Skill(skill="oh-my-claudecode:omc-plan")` (=`oh-my-claudecode:plan`) |
-| **단일 agent** (planner) | skill 오버헤드 없이 빠르게 plan 만 받고 싶을 때 | `Agent(subagent_type="oh-my-claudecode:planner", model="opus")` — SSOT 경로/배경 직접 inject |
-| **합의 루프** (ralplan) | 멀티파일 / 레이어 이동 / 아키텍처 트레이드오프 / backward-compat 고려 / 알고리즘 설계 + refactor 동시 | `Skill(skill="oh-my-claudecode:ralplan")` — planner + architect + critic 가 consensus 까지 반복 |
-| **수동 team** (Skill team) | ralplan 결과가 부족하거나 design 검토에 추가 역할 (security-reviewer 등) 이 필요할 때 | `Skill(skill="oh-my-claudecode:team")` 으로 `planner` + `architect` + `critic` (+추가 역할) 분담 |
+| **lead 직접 / 네이티브 Plan** | 단일 모듈 / 단일 책임 / SSOT 가 이미 거의 plan 수준 | lead 가 직접 `.omc/plans/<KEY>.md` 작성, 또는 `Agent(subagent_type="Plan")` |
+| **단일 agent** (planner) | 빠르게 plan 만 받고 싶을 때 | `Agent(subagent_type="general-purpose", model="opus")` 에 planner 역할 + SSOT 경로/배경 inject |
+| **합의 분담** (planner+architect+critic) | 멀티파일 / 레이어 이동 / 아키텍처 트레이드오프 / backward-compat 고려 / 알고리즘 설계 + refactor 동시 | planner / architect / critic 역할의 general-purpose 에이전트를 병렬 dispatch → lead 가 합의안으로 종합 |
+| **합의 분담 + 추가 역할** | 설계 검토에 별도 시각 (security-reviewer 등) 이 필요할 때 | 위 병렬 분담에 `security-reviewer` 등 역할 추가 |
 
 선택 기준:
-- SSOT 가 file:line 까지 명시하고 변경이 한 디렉토리 내면 → **omc-plan** 단독
-- "어디로 옮겨야 layer 가 깨지지 않나" / "namespace 구조" / "backward-compat alias 어떻게" / "기존 N개 호출처 어떻게 마이그" 같은 design 결정이 잡혀있지 않으면 → **ralplan** consensus
-- 디자인은 잡혔지만 별도 시각(보안/성능/테스트)이 필요하면 → **team** 으로 추가 역할 합류
+- SSOT 가 file:line 까지 명시하고 변경이 한 디렉토리 내면 → **lead 직접 / Plan** 단독
+- "어디로 옮겨야 layer 가 깨지지 않나" / "namespace 구조" / "backward-compat alias 어떻게" / "기존 N개 호출처 어떻게 마이그" 같은 design 결정이 잡혀있지 않으면 → **합의 분담** (planner+architect+critic 병렬)
+- 디자인은 잡혔지만 별도 시각(보안/성능/테스트)이 필요하면 → 합의 분담에 추가 역할 합류
 
-**중요 — chain 금지**: ralplan 은 plan 만 산출하고 종료. autopilot / ralph / team execution 으로 자동 chain 되지 않도록 args 에 "Output plan only. Do NOT proceed to autopilot/ralph/team — cubrid-flow handles step 6 implementation separately." 명시.
+**중요 — chain 금지**: plan 단계는 plan 만 산출하고 종료한다. 어떤 에이전트도 step 6 구현으로 자동 진행하지 않도록 프롬프트에 "Output plan only. Do NOT implement — cubrid-flow handles step 6 implementation separately." 명시.
 
 ## 라우팅 규칙 (단계별 진입 조건)
 
 | 단계 | 진입 조건 |
 |------|-----------|
-| 1 (SSOT) | KEY 잠정값 정함 (정식 CBRD 발급 전이면 임시 슬러그). `oh-my-claudecode:deep-interview` 가 사용자와 인터뷰 후 `.omc/ssot/<KEY>.md` 생성 |
-| 2 (plan) | `.omc/ssot/<KEY>.md` 존재. 단순 task: `oh-my-claudecode:omc-plan` (또는 `plan`) 단독. 멀티파일/리팩터/레이어 이동: `oh-my-claudecode:ralplan` 합의 루프 권장. 산출 `.omc/plans/<KEY>.md`. ralplan 호출 시 "consensus plan only — autopilot/ralph/team 으로 chain 금지, cubrid-flow 가 step 6 에서 호출한다" 명시 |
+| 1 (SSOT) | KEY 잠정값 정함 (정식 CBRD 발급 전이면 임시 슬러그). lead 가 사용자와 Socratic 인터뷰 후 `.omc/ssot/<KEY>.md` 생성 |
+| 2 (plan) | `.omc/ssot/<KEY>.md` 존재. 단순 task: lead 직접 또는 네이티브 `Plan` 단독. 멀티파일/리팩터/레이어 이동: planner+architect+critic 병렬 합의 분담 권장. 산출 `.omc/plans/<KEY>.md`. dispatch 시 "plan only — 구현으로 chain 금지, cubrid-flow 가 step 6 에서 호출한다" 명시 |
 | 3 (JIRA) | `~/.config/cubrid-skills/jira.env` 존재. SSOT 의 한 줄 요약 + Description 으로 `procedures/jira.md` (`create`) |
 | 4-5 (branch) | working tree clean, KEY 또는 BRANCH 이름 결정 |
 | 7 (PR) | 현재 브랜치 push 완료, `~/.cache/cubrid-pr/$KEY/` 의 3개 파일 준비 (`procedures/pr-prep.md` 가 SSOT/plan 으로부터 채움) |
@@ -282,7 +288,7 @@ procedures/ 안의 .md 들은 **개별 skill 이 아니다** — Claude Code 의
 - 단계 건너뛰기 자동 허용 금지 — 사용자가 "8단계로 점프" 라고 명시할 때만 허용.
 - 상태 파일 충돌 (같은 KEY 가 두 워크트리에서 진행) 시 lock 사용 금지 — JSON 파일 편집은 atomic rename 으로만, 충돌 감지는 mtime + sha 비교.
 - 9, 10, 12 단계의 결과를 무시하고 다음 단계 진행 금지. NOK 시 반드시 회귀 매트릭스대로 9.1 / 9.2 / 11 로 분기.
-- 13단계는 시작은 자동(`pr-review-loop` 등록) 가능하나 종료 판정은 사용자 — 머지는 cubrid-flow 가 하지 않음.
+- 13단계는 시작은 자동(`cubrid-pr-review` 호출) 가능하나 종료 판정은 사용자 — 머지는 cubrid-flow 가 하지 않음.
 - **회귀 무한루프 방지**: 같은 `from→to` 가 history 에 2회 반복되면 자동 진행 중단 → ESCALATE. 같은 단계 `attempts ≥ 5` 도 마찬가지. 회귀는 진단 도구지 해결책이 아님.
 - **회귀 매트릭스 외 경로 자동 결정 금지** — 매트릭스에 없는 회귀(예: 7→4)는 lead 가 임의로 가지 말고 ESCALATE 후 사용자 결정.
 - LOOPBACK 시 상태 파일의 회귀 대상 단계 status 를 `looped_back` 으로 표기 + `history` 에 entry append. `current_step` 은 회귀 대상으로 되돌림.
@@ -298,11 +304,11 @@ CBRD-NNNNN 은 **3단계 (`procedures/jira.md` `create`) 에서야 발급**된�
 → cubrid-flow:
    - 슬러그 정규화: parallel_scan_v2
    - 상태 파일: .omc/state/cubrid-flow/parallel_scan_v2.json (KEY=슬러그)
-   - 1단계 진입: Skill(skill="oh-my-claudecode:deep-interview")
+   - 1단계 진입: lead 가 직접 Socratic 인터뷰 진행
      → 인터뷰 종료 후 .omc/ssot/parallel_scan_v2.md 산출
 사용자: "진행"
 → cubrid-flow advance:
-   - 2단계: Skill(skill="oh-my-claudecode:plan")
+   - 2단계: lead 직접 또는 Agent(subagent_type="Plan")
      → .omc/plans/parallel_scan_v2.md 산출
 사용자: "진행"
 → cubrid-flow advance:
@@ -322,7 +328,7 @@ CBRD-NNNNN 은 **3단계 (`procedures/jira.md` `create`) 에서야 발급**된�
 → cubrid-flow:
    - 상태 파일이 없으면 신규 진입, KEY=CBRD-26800 그대로 사용
    - 3단계는 "이미 발급됨" 으로 mark, JIRA 본문만 동기화 (procedures/jira.md `update-desc`, 8단계 시점에 한 번 더)
-   - 1단계 deep-interview 부터 동일 진행
+   - 1단계 SSOT 인터뷰부터 동일 진행
 ```
 
 ### 진행 중 작업 재개

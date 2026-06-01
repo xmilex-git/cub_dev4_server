@@ -8,13 +8,12 @@ dev4 베이스 이미지(Rocky 8) 위에서, 새 컨테이너/서버에 본 사�
 | 단계 | 스크립트 | 내용 |
 |---|---|---|
 | 01 | `01_install_packages.sh` | dnf 로 `gh`, `tmux`, `python3.11`, `clang`, `cmake`, `ninja`, `git-lfs`, `jq` 등 누락된 것만 설치 |
-| 02 | `02_install_nvm_node.sh` | nvm + Node.js (`npx`/`npm` 용) 설치 |
+| 02 | `02_install_nvm_node.sh` | nvm + Node.js (`npx`/`npm` 용) + `@anthropic-ai/claude-code` (claude CLI) 설치 |
 | 03 | `03_setup_github_ssh.sh` | `gh auth login` → ed25519 SSH 키 생성 → `gh ssh-key add` 로 GitHub에 자동 등록 → SSH 연결 검증 → `git user.name/email` 설정 |
 | 04 | `04_install_dotfiles.sh` | `~/.dev4_profile`, `~/.cubrid.sh` 배치 + `~/.bashrc` 에 PATH/profile/nvm 블록 append |
 | 05 | `05_clone_repos.sh` | `~/dev/cubrid`, `~/cubrid-testcases`, `~/cubrid-testtools` SSH clone + fork remote(`xmilex`) 등록 |
 | 06 | `06_install_bin.sh` | `~/bin/` 의 모든 셸 스크립트 (`build_cubrid.sh`, `ctp_test.sh`, ...) 설치 |
 | 07 | `07_install_cmake_presets.sh` | `~/dev/cubrid/CMakeUserPresets.json` 배치 (clang preset 정의) |
-| 08 | `08_install_omc.sh` | `@anthropic-ai/claude-code` (claude CLI) + `oh-my-claudecode` npm 패키지 설치 |
 | 09 | `09_install_claude_skills.sh` | `~/dev/cubrid/.claude/` 의 `CLAUDE.md`, `hooks/`, `skills/` 마이그레이션 |
 
 ## 사용법
@@ -70,7 +69,6 @@ cd cub_dev4_server/dev_setup
 exec bash -l        # 새 셸로 .bashrc 다시 로드
 build_cubrid.sh d 11.5.develop   # debug 빌드 검증
 claude                # claude CLI 동작 확인
-# 그 안에서: /oh-my-claudecode:omc-setup  (OMC 플러그인 마지막 활성화)
 ```
 
 ## 환경 변수로 커스터마이즈
@@ -104,7 +102,6 @@ dev_setup/
 │   ├── 05_clone_repos.sh
 │   ├── 06_install_bin.sh
 │   ├── 07_install_cmake_presets.sh
-│   ├── 08_install_omc.sh
 │   └── 09_install_claude_skills.sh
 └── assets/
     ├── bin/                  # ~/bin 에 깔릴 셸 스크립트들 (스냅샷)
