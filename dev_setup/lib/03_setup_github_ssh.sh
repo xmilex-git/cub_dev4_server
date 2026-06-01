@@ -77,7 +77,9 @@ ssh-keyscan -t ed25519,rsa github.com >> "${HOME}/.ssh/known_hosts" 2>/dev/null 
 sort -u "${HOME}/.ssh/known_hosts" -o "${HOME}/.ssh/known_hosts"
 
 log_info "verifying SSH to github.com..."
-if ssh -T -o StrictHostKeyChecking=accept-new git@github.com 2>&1 | grep -q "successfully authenticated"; then
+# ssh -T always exits 1 (no shell access); capture output so pipefail doesn't flag a successful auth as failure.
+ssh_out="$(ssh -T -o StrictHostKeyChecking=accept-new git@github.com 2>&1 || true)"
+if echo "${ssh_out}" | grep -q "successfully authenticated"; then
     log_info "SSH to GitHub OK."
 else
     log_warn "SSH test did not confirm auth. You may need to wait a moment and retry:"
@@ -91,7 +93,10 @@ if [ -z "$(git config --global user.name 2>/dev/null || true)" ]; then
     git config --global user.name "${NAME}"
 fi
 if [ -z "$(git config --global user.email 2>/dev/null || true)" ]; then
-    EMAIL="${GIT_EMAIL:-$(gh api user --jq .email 2>/dev/null || echo "${USER}@$(hostname)")}"
+    # gh prints empty (exit 0) when the account email is private; `// empty` + fallback avoids setting user.email="".
+    EMAIL="${GIT_EMAIL:-}"
+    [ -z "${EMAIL}" ] && EMAIL="$(gh api user --jq '.email // empty' 2>/dev/null || true)"
+    [ -z "${EMAIL}" ] && EMAIL="${GH_USER}@users.noreply.github.com"
     log_info "setting git user.email = ${EMAIL}"
     git config --global user.email "${EMAIL}"
 fi
