@@ -28,6 +28,7 @@ CUBRID 서버를 켜거나 끄거나 재시작하고, 그 결과를 1분 안에 
 3. **명령은 foreground.** `run_in_background: false`. CUBRID 의 `cubrid server start <db>` 는 master 에 spawn 요청 후 빠르게 종료한다 (보통 5~15초). background 로 띄울 이유 없음.
 4. **status가 진실.** start/stop 명령의 exit code 보다 `cubrid server status` 의 출력이 신뢰 가능. 무조건 status 폴링으로 검증한다.
 5. **nohup / `&` 금지.** Bash 도구가 timeout 으로 처리하므로 추가 detach 필요 없음.
+6. **반드시 redirect/pipe 금지**. `cubrid server start` 는 master 에 spawn 요청을 보낸 뒤 daemon 자식이 부모의 stdout/stderr fd 를 그대로 들고 분리된다. 자식이 그 fd 를 닫지 않는 한 `tail` 등으로 pipe 연결하면 영원히 EOF 못 보고 대기 → Bash 도구 timeout 까지 hang. 
 
 ## 실행 절차
 
@@ -36,7 +37,7 @@ CUBRID 서버를 켜거나 끄거나 재시작하고, 그 결과를 1분 안에 
 Bash 도구로 다음을 `timeout: 60000` 으로 실행:
 
 ```bash
-cubrid server start demodb 2>&1 | head -20 || true
+cubrid server start demodb
 deadline=$((SECONDS+55))
 while [ $SECONDS -lt $deadline ]; do
   if cubrid server status 2>&1 | grep -q "Server demodb"; then
@@ -54,7 +55,7 @@ exit 2
 ### action = stop
 
 ```bash
-cubrid server stop demodb 2>&1 | head -20 || true
+cubrid server stop demodb
 deadline=$((SECONDS+55))
 while [ $SECONDS -lt $deadline ]; do
   if ! cubrid server status 2>&1 | grep -q "Server demodb"; then
@@ -72,9 +73,9 @@ exit 2
 ### action = restart
 
 ```bash
-cubrid server stop demodb 2>&1 | head -20 || true
+cubrid server stop demodb
 sleep 1
-cubrid server start demodb 2>&1 | head -20 || true
+cubrid server start demodb
 deadline=$((SECONDS+55))
 while [ $SECONDS -lt $deadline ]; do
   if cubrid server status 2>&1 | grep -q "Server demodb"; then
