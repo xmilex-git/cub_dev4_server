@@ -28,6 +28,7 @@ STEPS=(
     "07_install_cmake_presets"
     "08_install_global_claude_md"
     "09_install_claude_skills"
+    "10_install_ctp_scripts"
 )
 
 run_step() {

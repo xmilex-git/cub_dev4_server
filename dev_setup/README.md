@@ -16,6 +16,7 @@ dev4 베이스 이미지(Rocky 8) 위에서, 새 컨테이너/서버에 본 사�
 | 07 | `07_install_cmake_presets.sh` | `~/dev/cubrid/CMakeUserPresets.json` 배치 (clang preset 정의) |
 | 08 | `08_install_global_claude_md.sh` | 전역 `~/.claude/CLAUDE.md` 에 공통 규칙(scratch/임시파일 위치 등)을 marked block 으로 주입 (기존 내용 보존) |
 | 09 | `09_install_claude_skills.sh` | `~/dev/cubrid/.claude/` 의 `CLAUDE.md`, `hooks/`, `skills/` 마이그레이션 |
+| 10 | `10_install_ctp_scripts.sh` | `~/dev/cubrid/.vscode/` 에 CTP 래퍼(`execute_ctp.sh`, `watch_core_and_kill.sh`) 복원 — cubrid-ctp 스킬 의존, CUBRID 본체 git 미추적이라 재clone 시 소실됨 |
 
 ## 사용법
 
@@ -139,11 +140,13 @@ dev_setup/
 │   ├── 06_install_bin.sh
 │   ├── 07_install_cmake_presets.sh
 │   ├── 08_install_global_claude_md.sh
-│   └── 09_install_claude_skills.sh
+│   ├── 09_install_claude_skills.sh
+│   └── 10_install_ctp_scripts.sh
 └── assets/
     ├── bin/                  # ~/bin 에 깔릴 셸 스크립트들 (스냅샷)
     ├── dotfiles/             # .dev4_profile, .cubrid.sh, claude-account.sh
     ├── cmake/                # CMakeUserPresets.json
+    ├── vscode/               # .vscode CTP 래퍼 (execute_ctp.sh, watch_core_and_kill.sh)
     └── claude/               # CLAUDE.md, hooks/, skills/, global-rules.md
 ```
 
