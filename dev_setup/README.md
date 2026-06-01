@@ -10,7 +10,7 @@ dev4 베이스 이미지(Rocky 8) 위에서, 새 컨테이너/서버에 본 사�
 | 01 | `01_install_packages.sh` | dnf 로 `gh`, `tmux`, `python3.11`, `clang`, `cmake`, `ninja`, `git-lfs`, `jq` 등 누락된 것만 설치 |
 | 02 | `02_install_nvm_node.sh` | nvm + Node.js (`npx`/`npm` 용) + `@anthropic-ai/claude-code` (claude CLI) 설치 |
 | 03 | `03_setup_github_ssh.sh` | `gh auth login` → ed25519 SSH 키 생성 → `gh ssh-key add` 로 GitHub에 자동 등록 → SSH 연결 검증 → `git user.name/email` 설정 |
-| 04 | `04_install_dotfiles.sh` | `~/.dev4_profile`, `~/.cubrid.sh` 배치 + `~/.bashrc` 에 PATH/profile/nvm 블록 append |
+| 04 | `04_install_dotfiles.sh` | `~/.dev4_profile`, `~/.cubrid.sh`, `~/.claude-account.sh` 배치 + `~/.bashrc` 에 PATH/profile/nvm/claude-account 블록 append |
 | 05 | `05_clone_repos.sh` | `~/dev/cubrid`, `~/cubrid-testcases`, `~/cubrid-testtools` SSH clone + fork remote(`xmilex`) 등록 |
 | 06 | `06_install_bin.sh` | `~/bin/` 의 모든 셸 스크립트 (`build_cubrid.sh`, `ctp_test.sh`, ...) 설치 |
 | 07 | `07_install_cmake_presets.sh` | `~/dev/cubrid/CMakeUserPresets.json` 배치 (clang preset 정의) |
@@ -55,6 +55,41 @@ cd cub_dev4_server/dev_setup
 > ```
 > 스코프가 없거나 등록이 실패하면 03 단계가 public key 를 출력하면서
 > https://github.com/settings/ssh/new 에서 수동 등록하는 방법을 안내합니다.
+
+## Claude 계정 전환 (`claude-acct`)
+
+여러 Claude 구독 계정(예: 개인 / 회사)을 쓸 때, 한 계정의 사용량 한도를 소진하면
+다른 계정으로 갈아타기 위한 헬퍼. 04 단계에서 `~/.claude-account.sh` 가 설치되고
+`~/.bashrc`(있으면 `~/.zshrc`) 에서 자동 source 된다. 새 셸을 열면 `claude-acct`
+명령을 쓸 수 있다.
+
+```bash
+# 계정마다 1회 등록
+claude auth login            # 그 계정으로 로그인
+claude setup-token           # sk-ant-oat... 토큰 출력
+claude-acct save personal    # 위 토큰 붙여넣기 (입력 숨김)
+
+# 회사 계정은 로그아웃 후 다시 로그인하고 토큰을 새로 발급해야 한다
+claude auth logout
+claude auth login            # 회사 계정으로
+claude setup-token
+claude-acct save work
+
+# 전환
+claude-acct use work         # 이후 실행되는 claude 가 work 계정 사용
+claude-acct use personal
+claude-acct list             # 저장된 계정 (* = 활성)
+claude-acct off              # 토큰 해제 -> 기본 로그인 계정
+```
+
+> 토큰은 **발급 시점에 로그인된 계정** 기준이다. "토큰이 다르다"가 "계정이
+> 다르다"를 보장하지 않으니, 다른 계정 토큰은 반드시 `claude auth logout` →
+> 그 계정으로 `claude auth login` 후 `setup-token` 으로 만들 것.
+>
+> 저장 위치: macOS = Keychain, Linux = `~/.config/claude-account/<name>.token`(0600).
+> `CLAUDE_CODE_OAUTH_TOKEN` 환경변수를 토글하는 방식이라 **현재 셸에만** 적용되며,
+> 이미 떠 있는 claude 세션엔 반영되지 않는다(새로 실행해야 함). `setup-token` 은
+> Claude 구독(Max 권장)이 필요하다.
 
 ## 사전 조건
 
@@ -105,7 +140,7 @@ dev_setup/
 │   └── 09_install_claude_skills.sh
 └── assets/
     ├── bin/                  # ~/bin 에 깔릴 셸 스크립트들 (스냅샷)
-    ├── dotfiles/             # .dev4_profile, .cubrid.sh
+    ├── dotfiles/             # .dev4_profile, .cubrid.sh, claude-account.sh
     ├── cmake/                # CMakeUserPresets.json
     └── claude/               # CLAUDE.md, hooks/, skills/
 ```

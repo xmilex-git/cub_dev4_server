@@ -24,8 +24,9 @@ install_file() {
     log_info "installed ${dst}"
 }
 
-install_file "${ASSET}/dev4_profile" "${HOME}/.dev4_profile"
-install_file "${ASSET}/cubrid.sh"    "${HOME}/.cubrid.sh"
+install_file "${ASSET}/dev4_profile"      "${HOME}/.dev4_profile"
+install_file "${ASSET}/cubrid.sh"         "${HOME}/.cubrid.sh"
+install_file "${ASSET}/claude-account.sh" "${HOME}/.claude-account.sh"
 
 # .bashrc - 필요한 라인만 조건부로 append.
 # 기존 .bashrc 가 이미 갖고 있는 라인은 다시 안 넣음 (PATH/nvm/profile sourcing 중복 방지).
@@ -66,11 +67,25 @@ else
     log_info ".bashrc already loads nvm, skipping nvm block"
 fi
 
-# .zshrc - nvm 라인만 (있을 때만)
+# claude-account (Claude 계정 전환 헬퍼) sourcing
+if ! grep -qF '.claude-account.sh' "${BASHRC}" 2>/dev/null; then
+    append_block "${BASHRC}" "claude-account" <<'EOF'
+[ -f "$HOME/.claude-account.sh" ] && source "$HOME/.claude-account.sh"
+EOF
+else
+    log_info ".bashrc already sources .claude-account.sh, skipping block"
+fi
+
+# .zshrc - nvm + claude-account 라인만 (있을 때만)
 if [ -f "${HOME}/.zshrc" ]; then
     append_block "${HOME}/.zshrc" "nvm" <<'EOF'
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 EOF
+    if ! grep -qF '.claude-account.sh' "${HOME}/.zshrc" 2>/dev/null; then
+        append_block "${HOME}/.zshrc" "claude-account" <<'EOF'
+[ -f "$HOME/.claude-account.sh" ] && source "$HOME/.claude-account.sh"
+EOF
+    fi
 fi
