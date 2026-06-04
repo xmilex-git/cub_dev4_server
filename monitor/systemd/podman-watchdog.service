@@ -26,16 +26,24 @@ TasksMax=128
 User=root
 NoNewPrivileges=true
 
-# Read-only system with explicit writable runtime paths. The watchdog reads
-# /proc and /sys (allowed under ProtectSystem=strict) and only writes its own
-# state + log directories.
-ProtectSystem=strict
-ProtectHome=true
+# Hardening — tuned to this host's reality (discovered during P2/deploy):
+#  * ProtectSystem=full (NOT strict): the enrich tick runs rootful `podman ps`
+#    for the id->name map; podman needs /run writable. strict made /run
+#    read-only -> podman ps failed -> the widget showed bare IDs. `full` keeps
+#    /usr,/boot,/etc read-only; /var + /run stay writable.
+#  * ProtectHome is intentionally NOT set: podman's graphroot is /home/podman
+#    (this host puts container storage on the 3 TB /home disk). ProtectHome=true
+#    hides /home -> "mkdir /home/podman: read-only file system" -> podman ps
+#    fails. Under ProtectSystem=full, /home stays read-write.
+#  * PrivateTmp=false: keep the host /tmp for podman.
+#  (RestrictSUIDSGID omitted: unknown directive on this host's systemd 239.)
+ProtectSystem=full
 ReadWritePaths=/var/lib/podman-watchdog /var/log/podman-watchdog
-PrivateTmp=true
+PrivateTmp=false
 ProtectKernelTunables=true
+# Safe to keep: we only READ cgroup pids files; read-only /sys/fs/cgroup also
+# reinforces the no-kill invariant (cannot write cgroup control files).
 ProtectControlGroups=true
-RestrictSUIDSGID=true
 RestrictRealtime=true
 LockPersonality=true
 
