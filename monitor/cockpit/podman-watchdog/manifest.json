@@ -1,0 +1,10 @@
+{
+  "version": 0,
+  "menu": {
+    "podman-watchdog": {
+      "label": "Podman Watchdog",
+      "order": 60,
+      "path": "index.html"
+    }
+  }
+}

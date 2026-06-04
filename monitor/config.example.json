@@ -1,0 +1,61 @@
+{
+  "_comment": {
+    "about": "podman-watchdog configuration. Copy to /etc/podman-watchdog/config.json (mode 0600, root-owned) and set discord.webhookUrl. The real config.json is git-ignored and is the ONLY place the webhook secret lives.",
+    "fastTickSec": "Detection cadence (s): fork-free reads of meminfo/pressure/per-container pids + risk evaluation. Calibrated: 5.",
+    "slowTickSec": "Enrich cadence (s): podman ps id->name refresh, podman stats, OOM events, log prune. Calibrated: 30.",
+    "pidmax.warnPct": "Per-container pids.current/pids.max ratio for WARN. 0.80 => 1638/2048.",
+    "pidmax.critPct": "Per-container ratio for CRIT. 0.90 => 1843/2048. Must be >= warnPct.",
+    "pidmax.rateProjectTicks": "Rate-of-approach: warn early if, at the current per-tick delta, the container is projected to reach pids.max within this many fast ticks. Calibrated: 3.",
+    "pidmax.rateMinRatio": "Rate-of-approach only applies once the ratio is at least this. Calibrated: 0.50. (pids.max === 'max' is always EXEMPT from all pidmax/rate alerting.)",
+    "memory.psiSomeAvg10WarnPct": "/proc/pressure/memory 'some avg10=' percent for WARN. Calibrated: 10.",
+    "memory.psiSomeAvg10CritPct": "'some avg10=' percent for CRIT. Calibrated: 30. Must be >= warn.",
+    "memory.memAvailWarnBytes": "MemAvailable absolute backstop for WARN (bytes). Calibrated: ~12 GiB.",
+    "memory.memAvailCritBytes": "MemAvailable absolute backstop for CRIT (bytes). Calibrated: ~5 GiB. Must be <= warn.",
+    "memory.ponrBufferBytes": "Buffer added to the parsed earlyoom effective kill threshold to compute the 'point-of-no-return' CRIT line (bytes). Calibrated: 512 MiB.",
+    "cooldownSec": "Per (entity, severity) debounce window (s). Escalation warn->crit fires immediately. Calibrated: 300.",
+    "resolveAfterClears": "Consecutive clear evaluations before a RESOLVE alert is emitted. Calibrated: 2.",
+    "earlyoomRereadSec": "Re-read /etc/default/earlyoom every N s (drift). Calibrated: 300.",
+    "logRetentionHours": "Delete metrics-YYYYMMDD.jsonl files older than this. Calibrated: 48.",
+    "discord.webhookUrl": "Discord webhook URL. SECRET. Set only in the real config.json. Leave as REPLACE_ME here.",
+    "discord.retries": "POST retry attempts after the first try. On total failure the full alert is logged to stderr (journald). Calibrated: 3.",
+    "discord.backoffMs": "Exponential backoff base (ms): waits backoffMs * 2^attempt. Calibrated: 1000.",
+    "paths": "Filesystem locations. cgroupRoot is the cgroup v1 pids parent for rootful podman. stateFile is 0644 world-readable (widget contract, no secrets). logDir holds daily JSONL."
+  },
+
+  "fastTickSec": 5,
+  "slowTickSec": 30,
+
+  "pidmax": {
+    "warnPct": 0.8,
+    "critPct": 0.9,
+    "rateProjectTicks": 3,
+    "rateMinRatio": 0.5
+  },
+
+  "memory": {
+    "psiSomeAvg10WarnPct": 10,
+    "psiSomeAvg10CritPct": 30,
+    "memAvailWarnBytes": 12884901888,
+    "memAvailCritBytes": 5368709120,
+    "ponrBufferBytes": 536870912
+  },
+
+  "cooldownSec": 300,
+  "resolveAfterClears": 2,
+  "earlyoomRereadSec": 300,
+  "logRetentionHours": 48,
+
+  "discord": {
+    "webhookUrl": "https://discord.com/api/webhooks/REPLACE_ME",
+    "retries": 3,
+    "backoffMs": 1000
+  },
+
+  "paths": {
+    "procRoot": "/proc",
+    "cgroupRoot": "/sys/fs/cgroup/pids/libpod_parent",
+    "stateFile": "/var/lib/podman-watchdog/state.json",
+    "logDir": "/var/log/podman-watchdog",
+    "earlyoomDefaults": "/etc/default/earlyoom"
+  }
+}

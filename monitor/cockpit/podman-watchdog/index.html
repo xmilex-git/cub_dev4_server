@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Podman Watchdog</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- cockpit.js is served by the Cockpit framework at this well-known path. -->
+  <script src="../base1/cockpit.js"></script>
+</head>
+<body>
+  <main id="app">
+    <header class="bar">
+      <h1>Podman Watchdog</h1>
+      <span id="status-dot" class="dot dot-unknown" title="watchdog status"></span>
+      <span id="heartbeat" class="muted">connecting…</span>
+    </header>
+
+    <div id="stale-banner" class="banner banner-hidden">
+      &#9888; watchdog stale &mdash; no heartbeat. The monitor may be down.
+    </div>
+
+    <section class="card">
+      <h2>Host memory</h2>
+      <div id="host-mem" class="kv-grid">
+        <span class="muted">loading…</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Container pidmax risk</h2>
+      <table id="pid-table">
+        <thead>
+          <tr>
+            <th>Container</th>
+            <th>current</th>
+            <th>max</th>
+            <th>ratio</th>
+            <th>status</th>
+          </tr>
+        </thead>
+        <tbody id="pid-rows">
+          <tr><td colspan="5" class="muted">loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Active alerts</h2>
+      <ul id="alerts"><li class="muted">none</li></ul>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

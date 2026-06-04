@@ -1,0 +1,43 @@
+[Unit]
+Description=Podman host risk-monitoring watchdog (read-only, no-kill)
+Documentation=file:/opt/podman-watchdog/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+# Secret injection: the Discord webhook URL is provided via DISCORD_WEBHOOK_URL
+# in this git-ignored 0600 env file (never in the repo). The leading "-" makes it
+# optional so the unit still starts if the file is absent.
+EnvironmentFile=-/etc/podman-watchdog/watchdog.env
+ExecStart=/usr/bin/node /opt/podman-watchdog/src/index.js --config /etc/podman-watchdog/config.json
+Restart=on-failure
+RestartSec=5
+
+# Dead-man switch: if the watchdog hangs and stops sending WATCHDOG=1 within
+# this window, systemd restarts it (the monitor's worst failure is going silent).
+WatchdogSec=30
+
+# Self-resource caps so the monitor can never become the resource consumer it
+# watches. V8 heap is bounded inside MemoryMax.
+MemoryMax=256M
+TasksMax=128
+
+User=root
+NoNewPrivileges=true
+
+# Read-only system with explicit writable runtime paths. The watchdog reads
+# /proc and /sys (allowed under ProtectSystem=strict) and only writes its own
+# state + log directories.
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/podman-watchdog /var/log/podman-watchdog
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

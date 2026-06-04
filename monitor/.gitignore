@@ -1,0 +1,18 @@
+# Real runtime config holds the Discord webhook secret — NEVER commit it.
+config.json
+*.local.json
+
+# Secret env injection (DISCORD_WEBHOOK_URL) — NEVER commit. Only *.example is tracked.
+*.env
+watchdog.env
+.env
+
+# Node
+node_modules/
+
+# Scratch / orchestration artifacts (never deliverables)
+.claude/
+.omc/
+
+# Logs / runtime artifacts
+*.log

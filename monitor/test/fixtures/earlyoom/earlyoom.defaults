@@ -1,0 +1,3 @@
+# /etc/default/earlyoom (fixture sample)
+# earlyoom command line arguments
+EARLYOOM_ARGS="-r 0 -m 5,5 -M 409600,409600 --prefer '^(java|cub_server)$' --avoid '^(sshd|systemd)$'"
