@@ -37,14 +37,23 @@ test('parseEarlyoomArgs handles single value (warn === kill)', () => {
   assert.deepEqual(args.memKiB, { warn: 100, kill: 100 });
 });
 
-test('computeEffectiveMemKillBytes takes the larger floor (-M vs -m)', () => {
+test('computeEffectiveMemKillBytes: last flag wins (-m then -M => -M, ~400 MiB)', () => {
   const totalMem = 197307904 * KIB; // ~188 GiB
   const args = parseEarlyoomArgs('-m 5,5 -M 409600,409600');
-  // -M kill = 409600 KiB = ~400 MiB; -m 5% kill = ~9.4 GiB. Larger wins.
+  // Matches the real host: earlyoom journal reports SIGKILL at 0.21% (~400 MiB),
+  // i.e. the -M value, because -M is specified last and overrides -m.
+  assert.equal(args.lastMemFlag, 'M');
   const eff = computeEffectiveMemKillBytes(args, totalMem);
-  const percentBytes = (5 / 100) * totalMem;
-  assert.equal(eff, percentBytes);
-  assert.ok(eff > 409600 * KIB);
+  assert.equal(eff, 409600 * KIB);
+  assert.ok(eff < (5 / 100) * totalMem);
+});
+
+test('computeEffectiveMemKillBytes: reverse order (-M then -m => -m wins)', () => {
+  const totalMem = 197307904 * KIB;
+  const args = parseEarlyoomArgs('-M 409600,409600 -m 5,5');
+  assert.equal(args.lastMemFlag, 'm');
+  const eff = computeEffectiveMemKillBytes(args, totalMem);
+  assert.equal(eff, (5 / 100) * totalMem);
 });
 
 test('computeEffectiveMemKillBytes with only -M', () => {
@@ -62,7 +71,8 @@ test('loadEarlyoom reads + computes from fixture file', async () => {
   const out = await loadEarlyoom(EARLYOOM_FILE, totalMem);
   assert.ok(out);
   assert.deepEqual(out.args.memKiB, { warn: 409600, kill: 409600 });
-  assert.equal(out.effectiveMemKillBytes, (5 / 100) * totalMem);
+  // -M is last in the fixture, so it wins: ~400 MiB (matches host journal 0.21%).
+  assert.equal(out.effectiveMemKillBytes, 409600 * KIB);
 });
 
 test('loadEarlyoom returns null when the file is absent', async () => {
