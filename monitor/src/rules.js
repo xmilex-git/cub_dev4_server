@@ -6,7 +6,7 @@
 //   {
 //     entity:   string,                 // container id or 'host'
 //     name:     string|null,            // friendly name when known
-//     kind:     'pidmax'|'rate'|'mem',
+//     kind:     'pidmax'|'rate'|'mem'|'ctrmem',
 //     severity: 'warn'|'crit',
 //     ratio:    number|null,            // pids ratio or PSI/avail context value
 //     detail:   object,                 // kind-specific numbers
@@ -30,7 +30,7 @@ function finding(partial) {
  * @param {number} ts
  */
 export function evaluatePidmax(containers, config, rateTracker, ts) {
-  const { warnPct, critPct, rateProjectTicks, rateMinRatio } = config.pidmax;
+  const { warnPct, critPct, rateProjectTicks, rateMinRatio, alertWarn, alertRate } = config.pidmax;
   const findings = [];
 
   for (const c of containers) {
@@ -62,7 +62,7 @@ export function evaluatePidmax(containers, config, rateTracker, ts) {
           ts,
         }),
       );
-    } else if (c.current >= warnCount) {
+    } else if (alertWarn && c.current >= warnCount) {
       findings.push(
         finding({
           entity: c.id,
@@ -75,7 +75,7 @@ export function evaluatePidmax(containers, config, rateTracker, ts) {
           ts,
         }),
       );
-    } else if (ratio >= rateMinRatio) {
+    } else if (alertRate && ratio >= rateMinRatio) {
       // rate-of-approach: only consider once at least half-full, and only when
       // projected to hit the cap within `rateProjectTicks` fast ticks. This is a
       // distinct 'rate' kind (separate cooldown lane) so it does not mask the
@@ -211,7 +211,51 @@ export function evaluateMemory(host, earlyoom, config, ts) {
 }
 
 /**
- * Top-level evaluation. Combines pidmax/rate and memory findings.
+ * Evaluate the per-container memory rule: WARN when a single container's working
+ * set reaches `containerHostWarnPct` of host MemTotal. The shared containers run
+ * with no per-container memory limit, so the meaningful "one container is eating
+ * the box" signal is its fraction of total host memory, not of a (nonexistent)
+ * limit. A separate 'ctrmem' kind => its own cooldown lane per container.
+ *
+ * @param {Array<{id:string, name?:string|null, memBytes?:number|null}>} containers
+ * @param {number|null} totalMem  host MemTotal in bytes
+ * @param {object} config
+ * @param {number} ts
+ */
+export function evaluateContainerMemory(containers, totalMem, config, ts) {
+  const findings = [];
+  if (!Number.isFinite(totalMem) || totalMem <= 0) return findings;
+  const { containerHostWarnPct } = config.memory;
+  // Compare against an integer BYTE threshold (floor of pct*total) so the
+  // documented boundary holds exactly, mirroring the pidmax count thresholds.
+  const threshold = Math.floor(containerHostWarnPct * totalMem);
+
+  for (const c of containers) {
+    const used = c.memBytes;
+    if (!Number.isFinite(used)) continue; // memory unavailable / vanished: skip
+    if (used < threshold) continue;
+    const ratio = used / totalMem;
+    findings.push(
+      finding({
+        entity: c.id,
+        name: c.name ?? null,
+        kind: 'ctrmem',
+        severity: 'warn',
+        ratio,
+        detail: { reason: 'containerMem', usedBytes: used, totalBytes: totalMem, pct: containerHostWarnPct, threshold },
+        msg: `memory ${fmtBytes(used)} / ${fmtBytes(totalMem)} (${(ratio * 100).toFixed(1)}%) >= ${(containerHostWarnPct * 100).toFixed(0)}% of host`,
+        ts,
+      }),
+    );
+  }
+
+  return findings;
+}
+
+/**
+ * Top-level evaluation. Combines pidmax/rate, per-container memory, and host
+ * memory findings. Each rule family is independently gated by config so the
+ * operator can run only the lanes they want (see config.js).
  *
  * @param {object} snapshot { host:{meminfo,pressure}, containers:[...], earlyoom, totalMem }
  * @param {object} config
@@ -220,10 +264,15 @@ export function evaluateMemory(host, earlyoom, config, ts) {
  * @returns {Array<object>} findings
  */
 export function evaluate(snapshot, config, rateTracker, ts = Date.now()) {
-  const { host, containers = [], earlyoom = null } = snapshot;
+  const { host, containers = [], earlyoom = null, totalMem = null } = snapshot;
   const findings = [];
   findings.push(...evaluatePidmax(containers, config, rateTracker, ts));
-  if (host) findings.push(...evaluateMemory(host, earlyoom, config, ts));
+  if (config.memory.alertContainer) {
+    findings.push(...evaluateContainerMemory(containers, totalMem, config, ts));
+  }
+  if (host && config.memory.alertHost !== false) {
+    findings.push(...evaluateMemory(host, earlyoom, config, ts));
+  }
   return findings;
 }
 

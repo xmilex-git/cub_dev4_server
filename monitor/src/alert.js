@@ -1,15 +1,16 @@
-// alert.js — turn findings into Discord notifications with cooldown, escalation,
-// and resolve handling.
+// alert.js — turn findings into notifications with cooldown, escalation, and
+// resolve handling. The sink is selectable: a Discord embed or a Microsoft Teams
+// Adaptive Card (config.notifier).
 //
 // State machine, keyed by alertKey = `${entity}:${kind}:${detailKey}`:
 //   - First time a condition fires (or escalates warn->crit): dispatch now.
 //   - Same condition within cooldownSec: suppress (debounce).
-//   - Condition absent for `resolveAfterClears` consecutive evaluations: send a
-//     RESOLVE message and forget the key.
+//   - Condition absent for `resolveAfterClears` consecutive evaluations: forget
+//     the key, and (only when config.sendResolve) send a RESOLVE message.
 //
-// Delivery: POST a Discord embed via global fetch with retries + backoff. If all
-// attempts fail, log the full alert to stderr so journald keeps it (alert is
-// never silently lost). In dry-run, print to stdout and never POST.
+// Delivery: POST via global fetch with retries + backoff. If all attempts fail,
+// log the alert to stderr so journald keeps it (never silently lost). In
+// dry-run, print to stdout and never POST.
 //
 // The webhook URL is held only in memory (from config) and is never logged or
 // written to state.
@@ -103,10 +104,14 @@ export class AlertManager {
       if (seen.has(key)) continue;
       const count = (this.clearing.get(key) ?? 0) + 1;
       if (count >= this.config.resolveAfterClears) {
-        await this.sendResolve(state.finding);
+        // Only POST a RESOLVE when configured to. Either way the key is forgotten
+        // (after the same hysteresis) so a later recurrence alerts cleanly.
+        if (this.config.sendResolve) {
+          await this.sendResolve(state.finding);
+          resolved.push(state.finding);
+        }
         this.active.delete(key);
         this.clearing.delete(key);
-        resolved.push(state.finding);
       } else {
         this.clearing.set(key, count);
       }
@@ -161,33 +166,77 @@ export class AlertManager {
   }
 
   async send(finding, { escalated = false } = {}) {
-    const payload = this.buildEmbed(finding, { escalated });
-    await this.deliver(payload, finding);
+    await this.deliver(finding, { escalated });
   }
 
   async sendResolve(finding) {
-    const payload = this.buildEmbed(finding, { resolve: true });
-    await this.deliver(payload, finding);
+    await this.deliver(finding, { resolve: true });
   }
 
   /**
-   * Deliver a payload. Dry-run prints and returns. Otherwise POST with retries
-   * and exponential backoff; on total failure, log to stderr (journald) so the
-   * alert is preserved.
+   * Short, secret-free title line for a finding. Used by both payload builders
+   * and the dry-run log.
    */
-  async deliver(payload, finding) {
+  titleFor(finding, { resolve = false, escalated = false } = {}) {
+    const prefix = resolve ? 'RESOLVED' : escalated ? 'ESCALATED' : finding.severity.toUpperCase();
+    const entityLabel = finding.name ? `${finding.name} (${shortId(finding.entity)})` : String(finding.entity);
+    return `[${prefix}] ${finding.kind} — ${entityLabel}`;
+  }
+
+  /**
+   * Build the Microsoft Teams payload: a Power Automate "Workflows" message
+   * envelope wrapping an Adaptive Card. The card carries the container name and
+   * the warning content (finding.msg) — that is the whole contract for this
+   * channel. Teams returns 202 Accepted on success (handled by res.ok).
+   */
+  buildTeamsPayload(finding, { resolve = false, escalated = false } = {}) {
+    const prefix = resolve ? 'RESOLVED' : escalated ? 'ESCALATED' : finding.severity.toUpperCase();
+    const entityLabel = finding.name ? `${finding.name} (${shortId(finding.entity)})` : String(finding.entity);
+    return {
+      type: 'message',
+      attachments: [
+        {
+          contentType: 'application/vnd.microsoft.card.adaptive',
+          content: {
+            $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+            type: 'AdaptiveCard',
+            version: '1.4',
+            body: [
+              { type: 'TextBlock', text: `[${prefix}] ${entityLabel}`, weight: 'Bolder', size: 'Medium', wrap: true },
+              { type: 'TextBlock', text: finding.msg, wrap: true },
+              { type: 'TextBlock', text: 'podman-watchdog (read-only, no-kill)', size: 'Small', isSubtle: true, wrap: true },
+            ],
+          },
+        },
+      ],
+    };
+  }
+
+  /**
+   * Deliver an alert for `finding` to the configured sink (discord | teams).
+   * Dry-run prints and returns. Otherwise POST with retries + exponential
+   * backoff; on total failure, log to stderr (journald) so the alert is
+   * preserved (never silently lost).
+   */
+  async deliver(finding, { resolve = false, escalated = false } = {}) {
+    const notifier = this.config.notifier;
+    const payload = notifier === 'teams'
+      ? this.buildTeamsPayload(finding, { resolve, escalated })
+      : this.buildEmbed(finding, { resolve, escalated });
+
     if (this.dryRun) {
-      this.stdout(`[dry-run alert] ${JSON.stringify(payload.embeds[0].title)} :: ${finding.msg}`);
+      this.stdout(`[dry-run alert] ${JSON.stringify(this.titleFor(finding, { resolve, escalated }))} :: ${finding.msg}`);
       return;
     }
 
-    const url = this.config.discord.webhookUrl;
+    const sink = this.config[notifier];
+    const url = sink.webhookUrl;
     if (!url) {
       this.stderr(`[alert:no-webhook] ${finding.msg}`);
       return;
     }
 
-    const { retries, backoffMs } = this.config.discord;
+    const { retries, backoffMs } = sink;
     let lastErr = null;
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       try {
@@ -197,7 +246,7 @@ export class AlertManager {
           body: JSON.stringify(payload),
         });
         if (res.ok || res.status === 204) return;
-        // Honour Discord rate-limit hints when present.
+        // Honour a rate-limit hint when present (Discord 429 / Teams throttle).
         if (res.status === 429) {
           const retryAfter = Number(res.headers?.get?.('retry-after'));
           if (Number.isFinite(retryAfter) && retryAfter > 0) {
@@ -205,7 +254,7 @@ export class AlertManager {
             continue;
           }
         }
-        lastErr = new Error(`Discord webhook returned HTTP ${res.status}`);
+        lastErr = new Error(`${notifier} webhook returned HTTP ${res.status}`);
       } catch (err) {
         lastErr = err;
       }
@@ -214,9 +263,9 @@ export class AlertManager {
       }
     }
 
-    // Fallback: never lose the alert. Log the full content to stderr (journald).
+    // Fallback: never lose the alert. Log it to stderr (journald).
     this.stderr(
-      `[alert:webhook-failed] ${lastErr ? lastErr.message : 'unknown error'} :: ${finding.msg} :: ${JSON.stringify(payload.embeds[0].fields)}`,
+      `[alert:webhook-failed] ${lastErr ? lastErr.message : 'unknown error'} :: ${this.titleFor(finding, { resolve, escalated })} :: ${finding.msg}`,
     );
   }
 

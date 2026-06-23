@@ -183,3 +183,54 @@ test('snapshot() exposes active alerts without any secret', async () => {
   assert.ok(!serialised.includes('webhook'));
   assert.ok(!serialised.includes('discord.com'));
 });
+
+// --- Teams sink + resolve toggle ------------------------------------------
+
+test('teams notifier posts an Adaptive Card envelope (container name + warning)', async () => {
+  const { mgr, posts } = makeManager({
+    notifier: 'teams',
+    teams: { webhookUrl: 'https://teams/x', retries: 1, backoffMs: 1 },
+  });
+  await mgr.dispatch([
+    makeFinding({ name: '30-ilhansong', kind: 'ctrmem', msg: 'memory 150.0 GiB / 188.0 GiB (79.8%) >= 75% of host' }),
+  ]);
+  assert.equal(posts.length, 1);
+  const body = posts[0].body;
+  assert.equal(body.type, 'message');
+  assert.equal(body.embeds, undefined); // not a Discord embed
+  const card = body.attachments[0].content;
+  assert.equal(card.type, 'AdaptiveCard');
+  const texts = card.body.map((b) => b.text);
+  assert.ok(texts.some((t) => t.includes('30-ilhansong')), 'card carries the container name');
+  assert.ok(texts.some((t) => t.includes('75% of host')), 'card carries the warning content');
+});
+
+test('teams webhook failure (HTTP 400) falls back to stderr', async () => {
+  const config = buildConfig({ notifier: 'teams', teams: { webhookUrl: 'https://t', retries: 1, backoffMs: 1 } });
+  const stderr = [];
+  const mgr = new AlertManager(config, {
+    dryRun: false,
+    now: () => TS,
+    sleep: async () => {},
+    stderr: (l) => stderr.push(l),
+    fetchImpl: async () => ({ ok: false, status: 400, headers: { get: () => null } }),
+  });
+  await mgr.dispatch([makeFinding()]);
+  assert.equal(stderr.length, 1);
+  assert.match(stderr[0], /webhook-failed/);
+  assert.match(stderr[0], /teams webhook returned HTTP 400/);
+});
+
+test('sendResolve=false: the key clears (no RESOLVE posted) and re-alerts on recurrence', async () => {
+  const { mgr, posts } = makeManager({ sendResolve: false, resolveAfterClears: 2 });
+  await mgr.dispatch([makeFinding()]); // active -> 1 post
+  assert.equal(posts.length, 1);
+  await mgr.dispatch([]); // clear #1
+  const r = await mgr.dispatch([]); // clear #2 -> forget, but NO resolve post
+  assert.equal(r.resolved.length, 0);
+  assert.equal(posts.length, 1);
+  // forgotten -> the same condition alerts fresh (not suppressed by cooldown)
+  const r2 = await mgr.dispatch([makeFinding()]);
+  assert.equal(r2.sent.length, 1);
+  assert.equal(posts.length, 2);
+});

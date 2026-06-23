@@ -23,6 +23,7 @@ import { execFile } from 'node:child_process';
 import { loadConfig } from './config.js';
 import { readMeminfo, readPressure, readProcessInfo } from './collectors/proc.js';
 import { collectContainerPids, readContainerProcs } from './collectors/cgroup.js';
+import { collectContainerMem } from './collectors/cgroupMem.js';
 import { idNameMap, oomEvents, defaultExec } from './collectors/podman.js';
 import { loadEarlyoom } from './collectors/earlyoom.js';
 import { RateTracker } from './rateTracker.js';
@@ -103,17 +104,22 @@ function makeNotifier() {
  * a normalised container list for state/logging.
  */
 async function fastCollect(config, rateTracker, idNames, ts) {
-  const { procRoot, cgroupRoot } = config.paths;
+  const { procRoot, cgroupRoot, memCgroupRoot } = config.paths;
 
-  const [meminfo, pressure, rawContainers] = await Promise.all([
+  const [meminfo, pressure, rawContainers, memById] = await Promise.all([
     readMeminfo(procRoot),
     readPressure(procRoot, 'memory'),
     collectContainerPids(cgroupRoot),
+    // Per-container memory is only needed for the container-memory rule; skip the
+    // extra (fork-free) reads when that rule is off so the default tick is
+    // unchanged.
+    config.memory.alertContainer ? collectContainerMem(memCgroupRoot) : Promise.resolve(new Map()),
   ]);
 
   const containers = rawContainers.map((c) => {
     rateTracker.record(c.id, c.current, ts);
-    return { ...c, name: lookupName(idNames, c.id) };
+    const mem = memById.get(c.id) ?? null;
+    return { ...c, name: lookupName(idNames, c.id), memBytes: mem ? mem.workingSet : null };
   });
   rateTracker.retainOnly(containers.map((c) => c.id));
 

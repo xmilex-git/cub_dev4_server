@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { buildConfig } from '../src/config.js';
 import { RateTracker } from '../src/rateTracker.js';
-import { evaluate, evaluatePidmax, evaluateMemory } from '../src/rules.js';
+import { evaluate, evaluatePidmax, evaluateMemory, evaluateContainerMemory } from '../src/rules.js';
 
 const GiB = 1024 * 1024 * 1024;
 const MiB = 1024 * 1024;
@@ -170,4 +170,70 @@ test('evaluate combines container pidmax + host memory findings', () => {
   const f = evaluate(snapshot, cfg(), rt, TS);
   assert.ok(f.some((x) => x.kind === 'pidmax' && x.severity === 'crit'));
   assert.ok(f.some((x) => x.kind === 'mem' && x.severity === 'warn'));
+});
+
+// --- per-container memory (fraction of host MemTotal) ---------------------
+
+const HOST_TOTAL = 200 * GiB;
+
+test('ctrmem: container at 76% of host -> warn', () => {
+  const used = Math.ceil(0.76 * HOST_TOTAL);
+  const f = evaluateContainerMemory([{ id: 'c', name: 'svc', memBytes: used }], HOST_TOTAL, cfg(), TS);
+  const m = findOne(f, (x) => x.kind === 'ctrmem');
+  assert.equal(m.severity, 'warn');
+  assert.equal(m.detail.reason, 'containerMem');
+  assert.equal(m.name, 'svc');
+  assert.ok(m.ratio >= 0.75);
+});
+
+test('ctrmem: exactly at the floor(0.75*total) threshold fires', () => {
+  const used = Math.floor(0.75 * HOST_TOTAL);
+  const f = evaluateContainerMemory([{ id: 'c', memBytes: used }], HOST_TOTAL, cfg(), TS);
+  assert.equal(f.length, 1);
+});
+
+test('ctrmem: one below threshold does not fire', () => {
+  const used = Math.floor(0.75 * HOST_TOTAL) - 1;
+  const f = evaluateContainerMemory([{ id: 'c', memBytes: used }], HOST_TOTAL, cfg(), TS);
+  assert.equal(f.length, 0);
+});
+
+test('ctrmem: missing memBytes or totalMem -> skipped (no throw)', () => {
+  assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: null }], HOST_TOTAL, cfg(), TS).length, 0);
+  assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: 1e12 }], null, cfg(), TS).length, 0);
+});
+
+test('ctrmem: custom containerHostWarnPct honoured', () => {
+  const c = cfg({ memory: { containerHostWarnPct: 0.5 } });
+  const used = Math.floor(0.6 * HOST_TOTAL);
+  assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: used }], HOST_TOTAL, c, TS).length, 1);
+});
+
+// --- rule gating via config -----------------------------------------------
+
+test('gating: alertWarn=false suppresses pidmax WARN (crit still fires)', () => {
+  const rt = new RateTracker();
+  const c = cfg({ pidmax: { alertWarn: false, alertRate: false } });
+  assert.equal(evaluatePidmax([{ id: 'c', current: 1700, max: 2048 }], c, rt, TS).length, 0);
+  assert.equal(evaluatePidmax([{ id: 'c', current: 1843, max: 2048 }], c, rt, TS)[0].severity, 'crit');
+});
+
+test('gating: evaluate emits only ctrmem + pidmax-crit when host/warn/rate off', () => {
+  const rt = new RateTracker();
+  const c = cfg({
+    pidmax: { alertWarn: false, alertRate: false },
+    memory: { alertHost: false, alertContainer: true, containerHostWarnPct: 0.75 },
+  });
+  const snapshot = {
+    host: host(11 * GiB, 50), // would normally fire host mem warn + psi crit
+    containers: [
+      { id: 'critc', current: 1900, max: 2048 }, // pidmax crit
+      { id: 'hog', name: 'big', memBytes: Math.ceil(0.8 * HOST_TOTAL) }, // ctrmem
+      { id: 'warnc', current: 1700, max: 2048 }, // pidmax warn -> suppressed
+    ],
+    totalMem: HOST_TOTAL,
+    earlyoom: null,
+  };
+  const kinds = evaluate(snapshot, c, rt, TS).map((x) => `${x.kind}:${x.severity}`).sort();
+  assert.deepEqual(kinds, ['ctrmem:warn', 'pidmax:crit']);
 });

@@ -1,0 +1,13 @@
+cache 5200000000
+rss 154800000000
+mapped_file 12345678
+inactive_anon 0
+active_anon 154000000000
+inactive_file 5000000000
+active_file 200000000
+total_cache 5200000000
+total_rss 154800000000
+total_inactive_anon 0
+total_active_anon 154000000000
+total_inactive_file 5000000000
+total_active_file 200000000

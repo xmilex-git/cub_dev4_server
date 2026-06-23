@@ -98,3 +98,61 @@ test('loadConfig env injection lets an empty-file webhook validate via env', asy
   const c = await loadConfig(EXAMPLE, { DISCORD_WEBHOOK_URL: ' https://discord.com/api/webhooks/ENV/X ' });
   assert.equal(c.discord.webhookUrl, 'https://discord.com/api/webhooks/ENV/X');
 });
+
+// --- added: notifier / teams / rule gates / per-container memory ----------
+
+test('buildConfig defaults: notifier/gates/teams/memCgroupRoot', () => {
+  const c = buildConfig();
+  assert.equal(c.notifier, 'discord');
+  assert.equal(c.sendResolve, true);
+  assert.equal(c.pidmax.alertWarn, true);
+  assert.equal(c.pidmax.alertRate, true);
+  assert.equal(c.memory.alertHost, true);
+  assert.equal(c.memory.alertContainer, false);
+  assert.equal(c.memory.containerHostWarnPct, 0.75);
+  assert.equal(c.teams.webhookUrl, '');
+  assert.equal(c.teams.retries, 3);
+  assert.equal(c.paths.memCgroupRoot, '/sys/fs/cgroup/memory/libpod_parent');
+});
+
+test('validateConfig rejects an unknown notifier', () => {
+  assert.throws(() => buildConfig({ notifier: 'slack' }), /notifier must be/);
+});
+
+test('validateConfig rejects non-boolean gates and sendResolve', () => {
+  assert.throws(() => buildConfig({ sendResolve: 'no' }), /sendResolve must be a boolean/);
+  assert.throws(() => buildConfig({ pidmax: { alertWarn: 1 } }), /pidmax.alertWarn must be a boolean/);
+  assert.throws(() => buildConfig({ memory: { alertContainer: 'yes' } }), /memory.alertContainer must be a boolean/);
+});
+
+test('validateConfig rejects containerHostWarnPct outside [0,1]', () => {
+  assert.throws(() => buildConfig({ memory: { containerHostWarnPct: 1.5 } }), /containerHostWarnPct/);
+});
+
+test('validateConfig accepts notifier=teams with empty teams webhook (env-injected)', () => {
+  const c = buildConfig({ notifier: 'teams' });
+  assert.equal(c.notifier, 'teams');
+  assert.equal(c.teams.webhookUrl, '');
+});
+
+test('applyEnvOverrides injects TEAMS_WEBHOOK_URL (trimmed); independent of discord', () => {
+  const c = buildConfig();
+  applyEnvOverrides(c, { TEAMS_WEBHOOK_URL: '  https://env.example/teams?sig=x  ' });
+  assert.equal(c.teams.webhookUrl, 'https://env.example/teams?sig=x');
+  assert.equal(c.discord.webhookUrl, ''); // discord untouched
+});
+
+test('the Teams policy overlay validates (notifier=teams, lanes off, container on)', () => {
+  const c = buildConfig({
+    notifier: 'teams',
+    sendResolve: false,
+    pidmax: { alertWarn: false, alertRate: false },
+    memory: { alertHost: false, alertContainer: true, containerHostWarnPct: 0.75 },
+    teams: { webhookUrl: 'https://t/x' },
+  });
+  assert.equal(c.notifier, 'teams');
+  assert.equal(c.sendResolve, false);
+  assert.equal(c.pidmax.alertWarn, false);
+  assert.equal(c.memory.alertContainer, true);
+  assert.equal(c.pidmax.critPct, 0.9); // untouched -> still the >=90% protection
+});

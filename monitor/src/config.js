@@ -29,6 +29,12 @@ export const DEFAULT_CONFIG = Object.freeze({
     // ticks AND the current ratio is at least `minRatio`.
     rateProjectTicks: 3,
     rateMinRatio: 0.5,
+    // Per-lane emission gates (the rule still computes; these decide whether the
+    // finding is emitted). Default true preserves the original behaviour; set
+    // false in config.json to silence that lane. The >=critPct finding always
+    // emits — it is the core protection and is not gated.
+    alertWarn: true, // emit the WARN (>=warnPct, below critPct) finding
+    alertRate: true, // emit the rate-of-approach finding
   },
 
   // Memory rule.
@@ -42,13 +48,26 @@ export const DEFAULT_CONFIG = Object.freeze({
     // Buffer added to the earlyoom-derived effective kill threshold to compute
     // the "point-of-no-return" CRIT line (bytes).
     ponrBufferBytes: 512 * MiB,
+    // Emit the host-level memory findings (PSI / MemAvailable / point-of-no-
+    // return). Default true preserves the original behaviour.
+    alertHost: true,
+    // Per-container memory rule: emit a WARN when a single container's working
+    // set reaches `containerHostWarnPct` of host MemTotal. The shared containers
+    // have no per-container memory limit, so "fraction of host" is the
+    // meaningful signal for one container eating the box. Default OFF (opt-in).
+    alertContainer: false,
+    containerHostWarnPct: 0.75,
   },
 
   // Alerting / debounce.
   cooldownSec: 300, // per (entity, severity)
   resolveAfterClears: 2, // consecutive clear evaluations before RESOLVE
+  sendResolve: true, // emit a RESOLVE message when a condition clears
   earlyoomRereadSec: 300,
   logRetentionHours: 48,
+
+  // Which sink alerts are delivered to: 'discord' or 'teams'.
+  notifier: 'discord',
 
   discord: {
     webhookUrl: '', // SECRET — set in the real config.json only
@@ -56,9 +75,20 @@ export const DEFAULT_CONFIG = Object.freeze({
     backoffMs: 1000,
   },
 
+  // Microsoft Teams via a Power Automate "Workflows" incoming webhook (an
+  // Adaptive Card envelope). webhookUrl is a SECRET injected via the
+  // TEAMS_WEBHOOK_URL env (like DISCORD_WEBHOOK_URL), so it never lives in the
+  // repo-tracked config.
+  teams: {
+    webhookUrl: '', // SECRET — set via TEAMS_WEBHOOK_URL env or the real config.json
+    retries: 3,
+    backoffMs: 1000,
+  },
+
   paths: {
     procRoot: '/proc',
     cgroupRoot: '/sys/fs/cgroup/pids/libpod_parent',
+    memCgroupRoot: '/sys/fs/cgroup/memory/libpod_parent',
     stateFile: '/var/lib/podman-watchdog/state.json',
     logDir: '/var/log/podman-watchdog',
     earlyoomDefaults: '/etc/default/earlyoom',
@@ -122,6 +152,8 @@ export function validateConfig(config) {
   assert(config.pidmax.critPct >= config.pidmax.warnPct, 'pidmax.critPct must be >= pidmax.warnPct');
   assertPositiveNumber(config.pidmax.rateProjectTicks, 'pidmax.rateProjectTicks');
   assertPct(config.pidmax.rateMinRatio, 'pidmax.rateMinRatio');
+  assert(typeof config.pidmax.alertWarn === 'boolean', 'pidmax.alertWarn must be a boolean');
+  assert(typeof config.pidmax.alertRate === 'boolean', 'pidmax.alertRate must be a boolean');
 
   assertNonNegativeNumber(config.memory.psiSomeAvg10WarnPct, 'memory.psiSomeAvg10WarnPct');
   assertNonNegativeNumber(config.memory.psiSomeAvg10CritPct, 'memory.psiSomeAvg10CritPct');
@@ -136,17 +168,27 @@ export function validateConfig(config) {
     'memory.memAvailWarnBytes must be >= memory.memAvailCritBytes',
   );
   assertNonNegativeNumber(config.memory.ponrBufferBytes, 'memory.ponrBufferBytes');
+  assert(typeof config.memory.alertHost === 'boolean', 'memory.alertHost must be a boolean');
+  assert(typeof config.memory.alertContainer === 'boolean', 'memory.alertContainer must be a boolean');
+  assertPct(config.memory.containerHostWarnPct, 'memory.containerHostWarnPct');
 
   assertPositiveNumber(config.cooldownSec, 'cooldownSec');
   assertPositiveNumber(config.resolveAfterClears, 'resolveAfterClears');
+  assert(typeof config.sendResolve === 'boolean', 'sendResolve must be a boolean');
   assertPositiveNumber(config.earlyoomRereadSec, 'earlyoomRereadSec');
   assertPositiveNumber(config.logRetentionHours, 'logRetentionHours');
+
+  assert(config.notifier === 'discord' || config.notifier === 'teams', "notifier must be 'discord' or 'teams'");
 
   assert(typeof config.discord.webhookUrl === 'string', 'discord.webhookUrl must be a string');
   assertNonNegativeNumber(config.discord.retries, 'discord.retries');
   assertPositiveNumber(config.discord.backoffMs, 'discord.backoffMs');
 
-  for (const key of ['procRoot', 'cgroupRoot', 'stateFile', 'logDir', 'earlyoomDefaults']) {
+  assert(typeof config.teams.webhookUrl === 'string', 'teams.webhookUrl must be a string');
+  assertNonNegativeNumber(config.teams.retries, 'teams.retries');
+  assertPositiveNumber(config.teams.backoffMs, 'teams.backoffMs');
+
+  for (const key of ['procRoot', 'cgroupRoot', 'memCgroupRoot', 'stateFile', 'logDir', 'earlyoomDefaults']) {
     assert(typeof config.paths[key] === 'string' && config.paths[key].length > 0, `paths.${key} must be a non-empty string`);
   }
 
@@ -173,6 +215,10 @@ export function applyEnvOverrides(config, env = process.env) {
   const fromEnv = env.DISCORD_WEBHOOK_URL;
   if (typeof fromEnv === 'string' && fromEnv.trim().length > 0) {
     config.discord.webhookUrl = fromEnv.trim();
+  }
+  const teamsFromEnv = env.TEAMS_WEBHOOK_URL;
+  if (typeof teamsFromEnv === 'string' && teamsFromEnv.trim().length > 0) {
+    config.teams.webhookUrl = teamsFromEnv.trim();
   }
   return config;
 }

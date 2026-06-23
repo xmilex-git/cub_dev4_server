@@ -1,25 +1,35 @@
 {
   "_comment": {
-    "about": "podman-watchdog configuration. Copy to /etc/podman-watchdog/config.json (mode 0600, root-owned) and set discord.webhookUrl. The real config.json is git-ignored and is the ONLY place the webhook secret lives.",
-    "fastTickSec": "Detection cadence (s): fork-free reads of meminfo/pressure/per-container pids + risk evaluation. Calibrated: 5.",
+    "about": "podman-watchdog configuration. Copy to /etc/podman-watchdog/config.json (mode 0600, root-owned). Webhook secrets are injected via env (DISCORD_WEBHOOK_URL / TEAMS_WEBHOOK_URL) so they never live in the repo. The real config.json is git-ignored.",
+    "fastTickSec": "Detection cadence (s): fork-free reads of meminfo/pressure/per-container pids (+ per-container memory when memory.alertContainer is on) + risk evaluation. Calibrated: 5.",
     "slowTickSec": "Enrich cadence (s): podman ps id->name refresh, podman stats, OOM events, log prune. Calibrated: 30.",
     "pidmax.warnPct": "Per-container pids.current/pids.max ratio for WARN. 0.80 => 1638/2048.",
     "pidmax.critPct": "Per-container ratio for CRIT. 0.90 => 1843/2048. Must be >= warnPct.",
     "pidmax.rateProjectTicks": "Rate-of-approach: warn early if, at the current per-tick delta, the container is projected to reach pids.max within this many fast ticks. Calibrated: 3.",
     "pidmax.rateMinRatio": "Rate-of-approach only applies once the ratio is at least this. Calibrated: 0.50. (pids.max === 'max' is always EXEMPT from all pidmax/rate alerting.)",
+    "pidmax.alertWarn": "Emit the WARN (>=warnPct, below critPct) finding. Set false to alert only at >=critPct. Default true.",
+    "pidmax.alertRate": "Emit the rate-of-approach finding. Default true.",
     "memory.psiSomeAvg10WarnPct": "/proc/pressure/memory 'some avg10=' percent for WARN. Calibrated: 10.",
     "memory.psiSomeAvg10CritPct": "'some avg10=' percent for CRIT. Calibrated: 30. Must be >= warn.",
     "memory.memAvailWarnBytes": "MemAvailable absolute backstop for WARN (bytes). Calibrated: ~12 GiB.",
     "memory.memAvailCritBytes": "MemAvailable absolute backstop for CRIT (bytes). Calibrated: ~5 GiB. Must be <= warn.",
     "memory.ponrBufferBytes": "Buffer added to the parsed earlyoom effective kill threshold to compute the 'point-of-no-return' CRIT line (bytes). Calibrated: 512 MiB.",
+    "memory.alertHost": "Emit the host-level memory findings (PSI / MemAvailable / point-of-no-return). Default true.",
+    "memory.alertContainer": "Emit a per-container memory WARN when one container's working set reaches containerHostWarnPct of host MemTotal. The shared containers have no per-container memory limit, so 'fraction of host' is the meaningful signal. Default false (opt-in).",
+    "memory.containerHostWarnPct": "Per-container memory WARN threshold as a fraction of host MemTotal. 0.75 => a single container using >= 75% of host RAM.",
     "cooldownSec": "Per (entity, severity) debounce window (s). Escalation warn->crit fires immediately. Calibrated: 300.",
-    "resolveAfterClears": "Consecutive clear evaluations before a RESOLVE alert is emitted. Calibrated: 2.",
+    "resolveAfterClears": "Consecutive clear evaluations before a key is forgotten (and, when sendResolve, a RESOLVE alert is emitted). Calibrated: 2.",
+    "sendResolve": "Send a RESOLVE message when a condition clears. Set false to send alerts only (no recovery messages). Default true.",
     "earlyoomRereadSec": "Re-read /etc/default/earlyoom every N s (drift). Calibrated: 300.",
     "logRetentionHours": "Delete metrics-YYYYMMDD.jsonl files older than this. Calibrated: 48.",
-    "discord.webhookUrl": "Discord webhook URL. SECRET. Set only in the real config.json. Leave as REPLACE_ME here.",
+    "notifier": "Which sink alerts are delivered to: 'discord' or 'teams'.",
+    "discord.webhookUrl": "Discord webhook URL. SECRET. Injected via DISCORD_WEBHOOK_URL env; leave as REPLACE_ME here.",
     "discord.retries": "POST retry attempts after the first try. On total failure the full alert is logged to stderr (journald). Calibrated: 3.",
     "discord.backoffMs": "Exponential backoff base (ms): waits backoffMs * 2^attempt. Calibrated: 1000.",
-    "paths": "Filesystem locations. cgroupRoot is the cgroup v1 pids parent for rootful podman. stateFile is 0644 world-readable (widget contract, no secrets). logDir holds daily JSONL."
+    "teams.webhookUrl": "Microsoft Teams Power Automate 'Workflows' incoming webhook URL. SECRET. Injected via TEAMS_WEBHOOK_URL env; leave empty here.",
+    "teams.retries": "POST retry attempts after the first try. Calibrated: 3.",
+    "teams.backoffMs": "Exponential backoff base (ms). Calibrated: 1000.",
+    "paths": "Filesystem locations. cgroupRoot / memCgroupRoot are the cgroup v1 pids / memory parents for rootful podman. stateFile is 0644 world-readable (widget contract, no secrets). logDir holds daily JSONL."
   },
 
   "fastTickSec": 5,
@@ -29,7 +39,9 @@
     "warnPct": 0.8,
     "critPct": 0.9,
     "rateProjectTicks": 3,
-    "rateMinRatio": 0.5
+    "rateMinRatio": 0.5,
+    "alertWarn": true,
+    "alertRate": true
   },
 
   "memory": {
@@ -37,13 +49,19 @@
     "psiSomeAvg10CritPct": 30,
     "memAvailWarnBytes": 12884901888,
     "memAvailCritBytes": 5368709120,
-    "ponrBufferBytes": 536870912
+    "ponrBufferBytes": 536870912,
+    "alertHost": true,
+    "alertContainer": false,
+    "containerHostWarnPct": 0.75
   },
 
   "cooldownSec": 300,
   "resolveAfterClears": 2,
+  "sendResolve": true,
   "earlyoomRereadSec": 300,
   "logRetentionHours": 48,
+
+  "notifier": "discord",
 
   "discord": {
     "webhookUrl": "https://discord.com/api/webhooks/REPLACE_ME",
@@ -51,9 +69,16 @@
     "backoffMs": 1000
   },
 
+  "teams": {
+    "webhookUrl": "",
+    "retries": 3,
+    "backoffMs": 1000
+  },
+
   "paths": {
     "procRoot": "/proc",
     "cgroupRoot": "/sys/fs/cgroup/pids/libpod_parent",
+    "memCgroupRoot": "/sys/fs/cgroup/memory/libpod_parent",
     "stateFile": "/var/lib/podman-watchdog/state.json",
     "logDir": "/var/log/podman-watchdog",
     "earlyoomDefaults": "/etc/default/earlyoom"

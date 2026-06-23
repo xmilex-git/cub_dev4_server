@@ -4,10 +4,11 @@ A **read-only** risk-monitoring watchdog for a Podman host (Rocky Linux 8.10,
 cgroup v1, rootful podman, ~24 shared CUBRID containers) plus a thin static
 Cockpit widget.
 
-It watches per-container **pidmax** (`pids.current / pids.max`) and host
-**memory** pressure, and sends **Discord** alerts *before* the host is in
-trouble. It also keeps a 24–48h rolling metrics log and exposes an aggregate
-`state.json` for the Cockpit widget.
+It watches per-container **pidmax** (`pids.current / pids.max`), per-container
+**memory** (working set vs. host RAM), and host **memory** pressure, and sends
+**Discord** or **Microsoft Teams** alerts *before* the host is in trouble. It
+also keeps a 24–48h rolling metrics log and exposes an aggregate `state.json`
+for the Cockpit widget.
 
 ## The one invariant that matters
 
@@ -90,9 +91,24 @@ test/                      node:test units + fixtures
   effective SIGKILL `MemAvailable` floor, add a 512 MiB buffer. If MemAvailable
   drops to that line, earlyoom is about to act: a single dominant CRIT fires.
 
+**container memory** (per container, opt-in `memory.alertContainer`):
+
+- the shared containers run with no per-container memory limit, so the signal is
+  one container's **working set** (`memory.usage_in_bytes − total_inactive_file`,
+  i.e. what `podman stats` shows) as a fraction of host `MemTotal`: warn ≥
+  `memory.containerHostWarnPct` (default 0.75 → one container using ≥75% of host
+  RAM). Read fork-free from the cgroup v1 memory controller on the fast tick.
+
+**rule gates & sink**: each lane is independently switchable in config —
+`pidmax.alertWarn`, `pidmax.alertRate`, `memory.alertHost`,
+`memory.alertContainer` (the `pidmax` ≥`critPct` finding is always on, it is the
+core protection). Alerts are delivered to the `notifier` sink — `"discord"`
+(embed) or `"teams"` (a Power Automate "Workflows" Adaptive Card showing the
+container name + warning text). `sendResolve` toggles recovery messages.
+
 **alerting**: per-`(entity, severity)` cooldown 300s; warn→crit escalation fires
-immediately; a RESOLVE is emitted after the condition clears for 2 consecutive
-evaluations.
+immediately; when `sendResolve` is on, a RESOLVE is emitted after the condition
+clears for 2 consecutive evaluations (otherwise the key is simply forgotten).
 
 ## Configuration
 
@@ -100,8 +116,9 @@ Copy `config.example.json` to `/etc/podman-watchdog/config.json` (0600,
 root-owned) for the thresholds (documented inline under `_comment`, all
 overridable). The **Discord webhook URL is a secret injected via env**: copy
 `watchdog.env.example` to `/etc/podman-watchdog/watchdog.env` (0600) and set
-`DISCORD_WEBHOOK_URL` there — it overrides `discord.webhookUrl`, so the URL never
-needs to be in `config.json`. Both `config.json` and `*.env` are git-ignored.
+`DISCORD_WEBHOOK_URL` (and/or `TEAMS_WEBHOOK_URL` when `notifier` is `"teams"`)
+there — each overrides the matching `*.webhookUrl`, so the URL never needs to be
+in `config.json`. Both `config.json` and `*.env` are git-ignored.
 
 ## Development
 
