@@ -1,7 +1,7 @@
 {
   "name": "podman-watchdog",
   "version": "1.0.0",
-  "description": "Read-only Podman host risk-monitoring watchdog (pidmax + memory) with Discord alerts. No-kill invariant. Zero npm dependencies.",
+  "description": "Read-only Podman host risk-monitoring watchdog (pidmax + memory) with Discord/Teams alerts. No-kill invariant. Zero npm dependencies.",
   "type": "module",
   "private": true,
   "main": "src/index.js",

@@ -11,7 +11,7 @@
 #   systemctl enable --now cockpit.socket   # (after firewall scoping)
 #
 # It also does NOT overwrite an existing /etc/podman-watchdog/config.json, so
-# your real Discord webhook secret is preserved across redeploys.
+# your real webhook secret/policy is preserved across redeploys.
 
 set -euo pipefail
 
@@ -70,12 +70,12 @@ main() {
     install -m 0600 "${REPO_DIR}/config.example.json" "${CONF_DIR}/config.json"
   fi
 
-  # 2b) Secret env file (0600). Holds DISCORD_WEBHOOK_URL; never in the repo.
+  # 2b) Secret env file (0600). Holds webhook URLs; never in the repo.
   #     Preserved across redeploys so the real secret is kept.
   if [[ -f "${CONF_DIR}/watchdog.env" ]]; then
     log "watchdog.env already present -> preserved (secret kept)"
   else
-    log "watchdog.env absent -> seeding from watchdog.env.example (EDIT IT: set DISCORD_WEBHOOK_URL)"
+    log "watchdog.env absent -> seeding from watchdog.env.example (EDIT IT: set the selected webhook URL)"
     install -m 0600 "${REPO_DIR}/watchdog.env.example" "${CONF_DIR}/watchdog.env"
   fi
 
@@ -101,7 +101,7 @@ main() {
   cat <<EOF
 
 [install] done. NOT started (gated). Next manual steps:
-  1) Edit ${CONF_DIR}/watchdog.env -> set DISCORD_WEBHOOK_URL (0600, never committed)
+  1) Edit ${CONF_DIR}/watchdog.env -> set DISCORD_WEBHOOK_URL and/or TEAMS_WEBHOOK_URL (0600, never committed)
   2) Validate:   node ${OPT_DIR}/src/index.js --config ${CONF_DIR}/config.json --dry-run --once
   3) Enable:     systemctl enable --now podman-watchdog.service
   4) Cockpit:    systemctl enable --now cockpit.socket   (after firewall scoping)

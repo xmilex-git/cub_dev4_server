@@ -6,9 +6,9 @@ Wants=network-online.target
 
 [Service]
 Type=notify
-# Secret injection: the Discord webhook URL is provided via DISCORD_WEBHOOK_URL
-# in this git-ignored 0600 env file (never in the repo). The leading "-" makes it
-# optional so the unit still starts if the file is absent.
+# Secret injection: webhook URLs are provided via DISCORD_WEBHOOK_URL and/or
+# TEAMS_WEBHOOK_URL in this git-ignored 0600 env file (never in the repo). The
+# leading "-" makes it optional so the unit still starts if the file is absent.
 EnvironmentFile=-/etc/podman-watchdog/watchdog.env
 ExecStart=/usr/bin/node /opt/podman-watchdog/src/index.js --config /etc/podman-watchdog/config.json
 Restart=on-failure
