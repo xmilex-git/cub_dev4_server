@@ -172,41 +172,71 @@ test('evaluate combines container pidmax + host memory findings', () => {
   assert.ok(f.some((x) => x.kind === 'mem' && x.severity === 'warn'));
 });
 
-// --- per-container memory (fraction of host MemTotal) ---------------------
+// --- per-container memory (75% of cgroup limit; 50% of host if unlimited) --
 
 const HOST_TOTAL = 200 * GiB;
+const LIMIT = 64 * GiB; // a typical per-container cap
+const UNLIMITED = 9223372036854771712; // cgroup v1 "no limit" sentinel
 
-test('ctrmem: container at 76% of host -> warn', () => {
-  const used = Math.ceil(0.76 * HOST_TOTAL);
-  const f = evaluateContainerMemory([{ id: 'c', name: 'svc', memBytes: used }], HOST_TOTAL, cfg(), TS);
+test('ctrmem: limited container at 76% of its cgroup limit -> warn (basis=limit)', () => {
+  const used = Math.ceil(0.76 * LIMIT);
+  const f = evaluateContainerMemory([{ id: 'c', name: 'svc', memBytes: used, memLimitBytes: LIMIT }], HOST_TOTAL, cfg(), TS);
   const m = findOne(f, (x) => x.kind === 'ctrmem');
   assert.equal(m.severity, 'warn');
   assert.equal(m.detail.reason, 'containerMem');
+  assert.equal(m.detail.basis, 'limit');
+  assert.equal(m.detail.limitBytes, LIMIT);
   assert.equal(m.name, 'svc');
   assert.ok(m.ratio >= 0.75);
 });
 
-test('ctrmem: exactly at the floor(0.75*total) threshold fires', () => {
-  const used = Math.floor(0.75 * HOST_TOTAL);
-  const f = evaluateContainerMemory([{ id: 'c', memBytes: used }], HOST_TOTAL, cfg(), TS);
+test('ctrmem: limited container exactly at floor(0.75*limit) fires', () => {
+  const used = Math.floor(0.75 * LIMIT);
+  const f = evaluateContainerMemory([{ id: 'c', memBytes: used, memLimitBytes: LIMIT }], HOST_TOTAL, cfg(), TS);
   assert.equal(f.length, 1);
+  assert.equal(f[0].detail.basis, 'limit');
 });
 
-test('ctrmem: one below threshold does not fire', () => {
-  const used = Math.floor(0.75 * HOST_TOTAL) - 1;
+test('ctrmem: limited container one below threshold does not fire', () => {
+  const used = Math.floor(0.75 * LIMIT) - 1;
+  const f = evaluateContainerMemory([{ id: 'c', memBytes: used, memLimitBytes: LIMIT }], HOST_TOTAL, cfg(), TS);
+  assert.equal(f.length, 0);
+});
+
+test('ctrmem: unlimited container (sentinel) uses 50% of host MemTotal', () => {
+  const used = Math.ceil(0.51 * HOST_TOTAL);
+  const f = evaluateContainerMemory([{ id: 'c', memBytes: used, memLimitBytes: UNLIMITED }], HOST_TOTAL, cfg(), TS);
+  const m = findOne(f, (x) => x.kind === 'ctrmem');
+  assert.equal(m.detail.basis, 'host');
+  assert.equal(m.detail.limitBytes, null);
+  assert.ok(m.ratio >= 0.5);
+});
+
+test('ctrmem: no memLimitBytes at 49% of host -> no finding (50% threshold)', () => {
+  const used = Math.floor(0.5 * HOST_TOTAL) - 1;
   const f = evaluateContainerMemory([{ id: 'c', memBytes: used }], HOST_TOTAL, cfg(), TS);
   assert.equal(f.length, 0);
 });
 
-test('ctrmem: missing memBytes or totalMem -> skipped (no throw)', () => {
-  assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: null }], HOST_TOTAL, cfg(), TS).length, 0);
+test('ctrmem: a limit >= host RAM is treated as unlimited (host fraction)', () => {
+  const used = Math.ceil(0.51 * HOST_TOTAL);
+  const f = evaluateContainerMemory([{ id: 'c', memBytes: used, memLimitBytes: 500 * GiB }], HOST_TOTAL, cfg(), TS);
+  assert.equal(findOne(f, (x) => x.kind === 'ctrmem').detail.basis, 'host');
+});
+
+test('ctrmem: binding limit is evaluable even without host total; unlimited+no total -> skip', () => {
+  assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: null, memLimitBytes: LIMIT }], HOST_TOTAL, cfg(), TS).length, 0);
+  const used = Math.ceil(0.8 * LIMIT);
+  const f = evaluateContainerMemory([{ id: 'c', memBytes: used, memLimitBytes: LIMIT }], null, cfg(), TS);
+  assert.equal(f.length, 1);
+  assert.equal(f[0].detail.basis, 'limit');
   assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: 1e12 }], null, cfg(), TS).length, 0);
 });
 
-test('ctrmem: custom containerHostWarnPct honoured', () => {
-  const c = cfg({ memory: { containerHostWarnPct: 0.5 } });
-  const used = Math.floor(0.6 * HOST_TOTAL);
-  assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: used }], HOST_TOTAL, c, TS).length, 1);
+test('ctrmem: custom thresholds honoured (limit + no-limit)', () => {
+  const c = cfg({ memory: { containerLimitWarnPct: 0.5, containerNoLimitHostPct: 0.3 } });
+  assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: Math.floor(0.6 * LIMIT), memLimitBytes: LIMIT }], HOST_TOTAL, c, TS).length, 1);
+  assert.equal(evaluateContainerMemory([{ id: 'c', memBytes: Math.floor(0.35 * HOST_TOTAL) }], HOST_TOTAL, c, TS).length, 1);
 });
 
 // --- rule gating via config -----------------------------------------------
@@ -222,13 +252,13 @@ test('gating: evaluate emits only ctrmem + pidmax-crit when host/warn/rate off',
   const rt = new RateTracker();
   const c = cfg({
     pidmax: { alertWarn: false, alertRate: false },
-    memory: { alertHost: false, alertContainer: true, containerHostWarnPct: 0.75 },
+    memory: { alertHost: false, alertContainer: true },
   });
   const snapshot = {
     host: host(11 * GiB, 50), // would normally fire host mem warn + psi crit
     containers: [
       { id: 'critc', current: 1900, max: 2048 }, // pidmax crit
-      { id: 'hog', name: 'big', memBytes: Math.ceil(0.8 * HOST_TOTAL) }, // ctrmem
+      { id: 'hog', name: 'big', memBytes: Math.ceil(0.8 * HOST_TOTAL) }, // ctrmem (no limit -> 50% host)
       { id: 'warnc', current: 1700, max: 2048 }, // pidmax warn -> suppressed
     ],
     totalMem: HOST_TOTAL,

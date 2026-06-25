@@ -15,8 +15,9 @@
     "memory.memAvailCritBytes": "MemAvailable absolute backstop for CRIT (bytes). Calibrated: ~5 GiB. Must be <= warn.",
     "memory.ponrBufferBytes": "Buffer added to the parsed earlyoom effective kill threshold to compute the 'point-of-no-return' CRIT line (bytes). Calibrated: 512 MiB.",
     "memory.alertHost": "Emit the host-level memory findings (PSI / MemAvailable / point-of-no-return). Default true.",
-    "memory.alertContainer": "Emit a per-container memory WARN when one container's working set reaches containerHostWarnPct of host MemTotal. The shared containers have no per-container memory limit, so 'fraction of host' is the meaningful signal. Default false (opt-in).",
-    "memory.containerHostWarnPct": "Per-container memory WARN threshold as a fraction of host MemTotal. 0.75 => a single container using >= 75% of host RAM.",
+    "memory.alertContainer": "Emit a per-container memory WARN when one container's working set gets close to the memory it may use: containerLimitWarnPct of its cgroup memory limit when it has one, else containerNoLimitHostPct of host MemTotal. Default false (opt-in).",
+    "memory.containerLimitWarnPct": "Per-container memory WARN threshold as a fraction of the container's own cgroup memory limit. 0.75 => a container using >= 75% of its limit (e.g. 48 GiB of a 64 GiB cap).",
+    "memory.containerNoLimitHostPct": "Fallback WARN threshold (fraction of host MemTotal) for containers with no binding cgroup limit (cgroup 'unlimited', or a limit >= host RAM). 0.50 => such a container using >= 50% of host RAM.",
     "cooldownSec": "Per (entity, severity) debounce window (s). Escalation warn->crit fires immediately. Calibrated: 300.",
     "resolveAfterClears": "Consecutive clear evaluations before a key is forgotten (and, when sendResolve, a RESOLVE alert is emitted). Calibrated: 2.",
     "sendResolve": "Send a RESOLVE message when a condition clears. Set false to send alerts only (no recovery messages). Default true.",
@@ -52,7 +53,8 @@
     "ponrBufferBytes": 536870912,
     "alertHost": true,
     "alertContainer": false,
-    "containerHostWarnPct": 0.75
+    "containerLimitWarnPct": 0.75,
+    "containerNoLimitHostPct": 0.5
   },
 
   "cooldownSec": 300,

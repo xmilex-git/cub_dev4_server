@@ -52,11 +52,14 @@ export const DEFAULT_CONFIG = Object.freeze({
     // return). Default true preserves the original behaviour.
     alertHost: true,
     // Per-container memory rule: emit a WARN when a single container's working
-    // set reaches `containerHostWarnPct` of host MemTotal. The shared containers
-    // have no per-container memory limit, so "fraction of host" is the
-    // meaningful signal for one container eating the box. Default OFF (opt-in).
+    // set gets close to the memory it is allowed to use. When the container has
+    // a binding cgroup memory limit, the ceiling is `containerLimitWarnPct` of
+    // its own limit (e.g. 0.75 of a 64 GiB cap => 48 GiB). When it has no binding
+    // limit (cgroup "unlimited", or a limit >= host RAM), the meaningful ceiling
+    // is `containerNoLimitHostPct` of host MemTotal instead. Default OFF (opt-in).
     alertContainer: false,
-    containerHostWarnPct: 0.75,
+    containerLimitWarnPct: 0.75,
+    containerNoLimitHostPct: 0.5,
   },
 
   // Alerting / debounce.
@@ -170,7 +173,8 @@ export function validateConfig(config) {
   assertNonNegativeNumber(config.memory.ponrBufferBytes, 'memory.ponrBufferBytes');
   assert(typeof config.memory.alertHost === 'boolean', 'memory.alertHost must be a boolean');
   assert(typeof config.memory.alertContainer === 'boolean', 'memory.alertContainer must be a boolean');
-  assertPct(config.memory.containerHostWarnPct, 'memory.containerHostWarnPct');
+  assertPct(config.memory.containerLimitWarnPct, 'memory.containerLimitWarnPct');
+  assertPct(config.memory.containerNoLimitHostPct, 'memory.containerNoLimitHostPct');
 
   assertPositiveNumber(config.cooldownSec, 'cooldownSec');
   assertPositiveNumber(config.resolveAfterClears, 'resolveAfterClears');

@@ -33,13 +33,15 @@ test('parseInactiveFile reads total_inactive_file; 0 when absent', () => {
   assert.equal(parseInactiveFile('inactive_file 999\ntotal_inactive_file 7\n'), 7);
 });
 
-test('readContainerMem computes working set = usage - total_inactive_file', async () => {
+test('readContainerMem computes working set = usage - total_inactive_file, plus limit', async () => {
   const hog = await readContainerMem(join(MEM, `libpod-${ID_HOG}`));
   assert.equal(hog.usage, 160000000000);
   assert.equal(hog.workingSet, 160000000000 - 5000000000);
+  assert.equal(hog.limit, 68719476736); // 64 GiB binding limit
 
   const ok = await readContainerMem(join(MEM, `libpod-${ID_OK}`));
   assert.equal(ok.workingSet, 9000000000 - 1000000000);
+  assert.equal(ok.limit, 9223372036854771712); // cgroup v1 "no limit" sentinel
 });
 
 test('readContainerMem returns null on ENOENT (vanished container)', async () => {

@@ -109,7 +109,8 @@ test('buildConfig defaults: notifier/gates/teams/memCgroupRoot', () => {
   assert.equal(c.pidmax.alertRate, true);
   assert.equal(c.memory.alertHost, true);
   assert.equal(c.memory.alertContainer, false);
-  assert.equal(c.memory.containerHostWarnPct, 0.75);
+  assert.equal(c.memory.containerLimitWarnPct, 0.75);
+  assert.equal(c.memory.containerNoLimitHostPct, 0.5);
   assert.equal(c.teams.webhookUrl, '');
   assert.equal(c.teams.retries, 3);
   assert.equal(c.paths.memCgroupRoot, '/sys/fs/cgroup/memory/libpod_parent');
@@ -125,8 +126,12 @@ test('validateConfig rejects non-boolean gates and sendResolve', () => {
   assert.throws(() => buildConfig({ memory: { alertContainer: 'yes' } }), /memory.alertContainer must be a boolean/);
 });
 
-test('validateConfig rejects containerHostWarnPct outside [0,1]', () => {
-  assert.throws(() => buildConfig({ memory: { containerHostWarnPct: 1.5 } }), /containerHostWarnPct/);
+test('validateConfig rejects containerLimitWarnPct outside [0,1]', () => {
+  assert.throws(() => buildConfig({ memory: { containerLimitWarnPct: 1.5 } }), /containerLimitWarnPct/);
+});
+
+test('validateConfig rejects containerNoLimitHostPct outside [0,1]', () => {
+  assert.throws(() => buildConfig({ memory: { containerNoLimitHostPct: -0.1 } }), /containerNoLimitHostPct/);
 });
 
 test('validateConfig accepts notifier=teams with empty teams webhook (env-injected)', () => {
@@ -147,7 +152,7 @@ test('the Teams policy overlay validates (notifier=teams, lanes off, container o
     notifier: 'teams',
     sendResolve: false,
     pidmax: { alertWarn: false, alertRate: false },
-    memory: { alertHost: false, alertContainer: true, containerHostWarnPct: 0.75 },
+    memory: { alertHost: false, alertContainer: true, containerLimitWarnPct: 0.75, containerNoLimitHostPct: 0.5 },
     teams: { webhookUrl: 'https://t/x' },
   });
   assert.equal(c.notifier, 'teams');

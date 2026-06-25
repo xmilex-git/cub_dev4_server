@@ -93,11 +93,15 @@ test/                      node:test units + fixtures
 
 **container memory** (per container, opt-in `memory.alertContainer`):
 
-- the shared containers run with no per-container memory limit, so the signal is
-  one container's **working set** (`memory.usage_in_bytes − total_inactive_file`,
-  i.e. what `podman stats` shows) as a fraction of host `MemTotal`: warn ≥
-  `memory.containerHostWarnPct` (default 0.75 → one container using ≥75% of host
-  RAM). Read fork-free from the cgroup v1 memory controller on the fast tick.
+- the signal is one container's **working set** (`memory.usage_in_bytes −
+  total_inactive_file`, i.e. what `podman stats` shows) measured against the
+  memory it is allowed to use:
+  - **with a cgroup memory limit** → warn ≥ `memory.containerLimitWarnPct` of
+    that limit (default 0.75 → ≥48 GiB of a 64 GiB cap).
+  - **with no binding limit** (cgroup "unlimited", or a limit ≥ host RAM) → warn
+    ≥ `memory.containerNoLimitHostPct` of host `MemTotal` (default 0.50).
+  Read fork-free from the cgroup v1 memory controller (`memory.usage_in_bytes`,
+  `memory.stat`, `memory.limit_in_bytes`) on the fast tick.
 
 **rule gates & sink**: each lane is independently switchable in config —
 `pidmax.alertWarn`, `pidmax.alertRate`, `memory.alertHost`,

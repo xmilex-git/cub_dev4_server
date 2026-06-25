@@ -211,30 +211,70 @@ export function evaluateMemory(host, earlyoom, config, ts) {
 }
 
 /**
- * Evaluate the per-container memory rule: WARN when a single container's working
- * set reaches `containerHostWarnPct` of host MemTotal. The shared containers run
- * with no per-container memory limit, so the meaningful "one container is eating
- * the box" signal is its fraction of total host memory, not of a (nonexistent)
- * limit. A separate 'ctrmem' kind => its own cooldown lane per container.
+ * Is `limit` (bytes) a real, binding cgroup memory limit for this host?
  *
- * @param {Array<{id:string, name?:string|null, memBytes?:number|null}>} containers
+ * cgroup v1 reports "no limit" as a huge sentinel (~9.22e18, above
+ * Number.MAX_SAFE_INTEGER), and a limit set at/above physical RAM can never
+ * actually bind. Either case is treated as "no binding limit" so the rule falls
+ * back to the host-fraction ceiling.
+ */
+function isBindingLimit(limit, totalMem) {
+  if (!Number.isFinite(limit) || limit <= 0) return false;
+  if (limit > Number.MAX_SAFE_INTEGER) return false; // cgroup "unlimited" sentinel
+  if (Number.isFinite(totalMem) && limit >= totalMem) return false;
+  return true;
+}
+
+/**
+ * Evaluate the per-container memory rule: WARN when a single container's working
+ * set gets close to the memory it is allowed to use.
+ *   - With a binding cgroup limit: warn at `containerLimitWarnPct` of that limit
+ *     (e.g. 0.75 of a 64 GiB cap => 48 GiB).
+ *   - With no binding limit ("unlimited", or a limit >= host RAM): warn at
+ *     `containerNoLimitHostPct` of host MemTotal — the meaningful "one container
+ *     is eating the box" signal when there is no per-container ceiling.
+ * A separate 'ctrmem' kind => its own cooldown lane per container.
+ *
+ * @param {Array<{id:string, name?:string|null, memBytes?:number|null, memLimitBytes?:number|null}>} containers
  * @param {number|null} totalMem  host MemTotal in bytes
  * @param {object} config
  * @param {number} ts
  */
 export function evaluateContainerMemory(containers, totalMem, config, ts) {
   const findings = [];
-  if (!Number.isFinite(totalMem) || totalMem <= 0) return findings;
-  const { containerHostWarnPct } = config.memory;
-  // Compare against an integer BYTE threshold (floor of pct*total) so the
-  // documented boundary holds exactly, mirroring the pidmax count thresholds.
-  const threshold = Math.floor(containerHostWarnPct * totalMem);
+  const { containerLimitWarnPct, containerNoLimitHostPct } = config.memory;
 
   for (const c of containers) {
     const used = c.memBytes;
     if (!Number.isFinite(used)) continue; // memory unavailable / vanished: skip
+
+    const limit = c.memLimitBytes;
+    const limited = isBindingLimit(limit, totalMem);
+
+    let base;
+    let pct;
+    let basis;
+    if (limited) {
+      base = limit;
+      pct = containerLimitWarnPct;
+      basis = 'limit';
+    } else {
+      // No binding limit: fall back to a fraction of host RAM. Skip if we cannot
+      // read host total (cannot compute the fraction).
+      if (!Number.isFinite(totalMem) || totalMem <= 0) continue;
+      base = totalMem;
+      pct = containerNoLimitHostPct;
+      basis = 'host';
+    }
+
+    // Compare against an integer BYTE threshold (floor of pct*base) so the
+    // documented boundary holds exactly, mirroring the pidmax count thresholds.
+    const threshold = Math.floor(pct * base);
     if (used < threshold) continue;
-    const ratio = used / totalMem;
+    const ratio = used / base;
+    const msg = limited
+      ? `memory ${fmtBytes(used)} / ${fmtBytes(base)} limit (${(ratio * 100).toFixed(1)}%) >= warn ${(pct * 100).toFixed(0)}% of limit`
+      : `memory ${fmtBytes(used)} / ${fmtBytes(base)} host (${(ratio * 100).toFixed(1)}%) >= warn ${(pct * 100).toFixed(0)}% of host (no cgroup limit)`;
     findings.push(
       finding({
         entity: c.id,
@@ -242,8 +282,17 @@ export function evaluateContainerMemory(containers, totalMem, config, ts) {
         kind: 'ctrmem',
         severity: 'warn',
         ratio,
-        detail: { reason: 'containerMem', usedBytes: used, totalBytes: totalMem, pct: containerHostWarnPct, threshold },
-        msg: `memory ${fmtBytes(used)} / ${fmtBytes(totalMem)} (${(ratio * 100).toFixed(1)}%) >= ${(containerHostWarnPct * 100).toFixed(0)}% of host`,
+        detail: {
+          reason: 'containerMem',
+          basis,
+          usedBytes: used,
+          baseBytes: base,
+          limitBytes: limited ? limit : null,
+          totalBytes: Number.isFinite(totalMem) ? totalMem : null,
+          pct,
+          threshold,
+        },
+        msg,
         ts,
       }),
     );

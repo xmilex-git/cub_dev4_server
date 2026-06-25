@@ -119,7 +119,12 @@ async function fastCollect(config, rateTracker, idNames, ts) {
   const containers = rawContainers.map((c) => {
     rateTracker.record(c.id, c.current, ts);
     const mem = memById.get(c.id) ?? null;
-    return { ...c, name: lookupName(idNames, c.id), memBytes: mem ? mem.workingSet : null };
+    return {
+      ...c,
+      name: lookupName(idNames, c.id),
+      memBytes: mem ? mem.workingSet : null,
+      memLimitBytes: mem ? mem.limit : null,
+    };
   });
   rateTracker.retainOnly(containers.map((c) => c.id));
 

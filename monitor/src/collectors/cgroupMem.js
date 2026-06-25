@@ -3,10 +3,15 @@
 // Target layout (rootful podman, cgroup v1 memory controller):
 //   /sys/fs/cgroup/memory/libpod_parent/libpod-<ID>/memory.usage_in_bytes
 //   /sys/fs/cgroup/memory/libpod_parent/libpod-<ID>/memory.stat (total_inactive_file)
+//   /sys/fs/cgroup/memory/libpod_parent/libpod-<ID>/memory.limit_in_bytes
 //
 // "Working set" = usage_in_bytes - total_inactive_file (the reclaimable page
 // cache). This matches what `podman stats` reports as MEM USAGE, so a container
 // merely holding a lot of evictable file cache does not trip a false alarm.
+//
+// `limit` = memory.limit_in_bytes. When a container has no memory limit, cgroup
+// v1 reports a huge sentinel (~9.22e18, i.e. > Number.MAX_SAFE_INTEGER); the
+// rules layer treats such a value (and any limit >= host RAM) as "no limit".
 //
 // `memCgroupRoot` is injectable so tests run against fixture directories. All
 // reads tolerate ENOENT: a container can stop or be created mid-scan (a race),
@@ -50,9 +55,26 @@ export function parseInactiveFile(text) {
 }
 
 /**
- * Read the working-set bytes for one container memory cgroup directory.
+ * Read the configured memory limit (bytes) for one container memory cgroup.
+ * Returns null when the file is absent (ENOENT race) or unparseable; the rules
+ * layer treats a null/huge limit as "no binding limit".
+ */
+export async function readMemLimit(dir) {
+  let raw;
+  try {
+    raw = await readFile(join(dir, 'memory.limit_in_bytes'), 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+  const limit = Number.parseInt(raw.trim(), 10);
+  return Number.isFinite(limit) ? limit : null;
+}
+
+/**
+ * Read the working-set bytes and memory limit for one container memory cgroup.
  *
- * @returns {{ usage:number, workingSet:number }|null}
+ * @returns {{ usage:number, workingSet:number, limit:number|null }|null}
  *   Returns null if the directory/files vanished (ENOENT race) so the caller
  *   skips this container.
  */
@@ -75,12 +97,13 @@ export async function readContainerMem(dir) {
   if (!Number.isFinite(usage)) return null;
   const inactiveFile = parseInactiveFile(statRaw);
   const workingSet = Math.max(0, usage - inactiveFile);
-  return { usage, workingSet };
+  const limit = await readMemLimit(dir);
+  return { usage, workingSet, limit };
 }
 
 /**
  * List all container memory cgroups and read each working set in one call.
- * Returns a Map of id -> { usage, workingSet }. Containers that vanished
+ * Returns a Map of id -> { usage, workingSet, limit }. Containers that vanished
  * mid-scan are dropped.
  */
 export async function collectContainerMem(memCgroupRoot) {
