@@ -110,6 +110,14 @@ core protection). Alerts are delivered to the `notifier` sink — `"discord"`
 (embed) or `"teams"` (a Power Automate "Workflows" Adaptive Card showing the
 container name + warning text). `sendResolve` toggles recovery messages.
 
+On the `teams` sink, a container alert can **@mention its owner** so they get
+pinged: set `teams.mentions` to a map keyed by the container owner base name
+(the `[a-z]+` after the leading `<num>-`, e.g. `34-ilhansong_data2` → `ilhansong`)
+with `{ "name": "<display>", "id": "<UPN/email or Entra Object ID>" }`. The map
+holds people's addresses, so it is a **secret**: keep it only in the real
+`/etc/podman-watchdog/config.json` on the host, never in the repo. Host-level
+findings and unmapped containers stay plain; resolves never tag.
+
 **alerting**: per-`(entity, severity)` cooldown 300s; warn→crit escalation fires
 immediately; when `sendResolve` is on, a RESOLVE is emitted after the condition
 clears for 2 consecutive evaluations (otherwise the key is simply forgotten).

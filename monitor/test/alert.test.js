@@ -205,6 +205,46 @@ test('teams notifier posts an Adaptive Card envelope (container name + warning)'
   assert.ok(texts.some((t) => t.includes('75% of host')), 'card carries the warning content');
 });
 
+test('teams: container alert @mentions the owner; host/unmapped/resolve do not', async () => {
+  // Synthetic fixtures only — real owner addresses live solely in the host config.
+  const mentions = { alice: { name: 'Alice', id: 'alice@example.test' } };
+  const teams = { webhookUrl: 'https://teams/x', retries: 1, backoffMs: 1, mentions };
+
+  // mapped container: 10-alice -> owner base "alice" -> mention
+  const a = makeManager({ notifier: 'teams', teams });
+  await a.mgr.dispatch([makeFinding({ entity: 'd22ba41', name: '10-alice', kind: 'ctrmem', msg: 'memory 48 GiB / 64 GiB limit' })]);
+  const card = a.posts[0].body.attachments[0].content;
+  assert.ok(card.body[0].text.includes('<at>Alice</at>'), 'headline carries the mention token');
+  assert.equal(card.msteams.entities[0].text, '<at>Alice</at>');
+  assert.equal(card.msteams.entities[0].mentioned.id, 'alice@example.test');
+
+  // owner-base extraction tolerates name suffixes: 11-alice_data2 also maps to alice
+  const a2 = makeManager({ notifier: 'teams', teams });
+  await a2.mgr.dispatch([makeFinding({ entity: 'x', name: '11-alice_data2', kind: 'pidmax', msg: 'pids high' })]);
+  assert.ok(a2.posts[0].body.attachments[0].content.msteams, '11-alice_data2 also mentions alice');
+
+  // unmapped container (70-bob): no mention
+  const b = makeManager({ notifier: 'teams', teams });
+  await b.mgr.dispatch([makeFinding({ entity: 'y', name: '70-bob', kind: 'ctrmem', msg: 'm' })]);
+  const c2 = b.posts[0].body.attachments[0].content;
+  assert.equal(c2.msteams, undefined, 'unmapped container has no mention');
+  assert.ok(!c2.body[0].text.includes('<at>'), 'no mention token for unmapped');
+
+  // host finding: never mentions even with a map present
+  const c = makeManager({ notifier: 'teams', teams });
+  await c.mgr.dispatch([makeFinding({ entity: 'host', name: null, kind: 'mem', detail: { reason: 'psi' }, msg: 'psi high' })]);
+  assert.equal(c.posts[0].body.attachments[0].content.msteams, undefined, 'host finding has no mention');
+
+  // resolve does not tag: fire (mention) then clear twice -> RESOLVE without mention
+  const d = makeManager({ notifier: 'teams', teams, resolveAfterClears: 2 });
+  await d.mgr.dispatch([makeFinding({ entity: 'd22ba41', name: '10-alice', kind: 'ctrmem', msg: 'memory 48 GiB' })]);
+  await d.mgr.dispatch([]);
+  await d.mgr.dispatch([]);
+  const resolveCard = d.posts[d.posts.length - 1].body.attachments[0].content;
+  assert.match(resolveCard.body[0].text, /RESOLVED/);
+  assert.equal(resolveCard.msteams, undefined, 'resolve card does not @mention');
+});
+
 test('teams webhook failure (HTTP 400) falls back to stderr', async () => {
   const config = buildConfig({ notifier: 'teams', teams: { webhookUrl: 'https://t', retries: 1, backoffMs: 1 } });
   const stderr = [];

@@ -86,6 +86,13 @@ export const DEFAULT_CONFIG = Object.freeze({
     webhookUrl: '', // SECRET — set via TEAMS_WEBHOOK_URL env or the real config.json
     retries: 3,
     backoffMs: 1000,
+    // Optional owner @mention map for CONTAINER alerts, keyed by the container's
+    // owner base name (the [a-z]+ run after the leading "<num>-", e.g.
+    // "34-ilhansong_data2" -> "ilhansong"). Each value is { name, id } where id
+    // is the person's Teams UPN/email or Entra Object ID. SECRET (holds people's
+    // addresses) — injected only into the real config.json on the host, never
+    // committed. Empty default => no mentions (plain alert).
+    mentions: {},
   },
 
   paths: {
@@ -191,6 +198,13 @@ export function validateConfig(config) {
   assert(typeof config.teams.webhookUrl === 'string', 'teams.webhookUrl must be a string');
   assertNonNegativeNumber(config.teams.retries, 'teams.retries');
   assertPositiveNumber(config.teams.backoffMs, 'teams.backoffMs');
+  assert(isPlainObject(config.teams.mentions), 'teams.mentions must be an object');
+  for (const [k, v] of Object.entries(config.teams.mentions)) {
+    assert(
+      isPlainObject(v) && typeof v.name === 'string' && v.name.length > 0 && typeof v.id === 'string' && v.id.length > 0,
+      `teams.mentions.${k} must be { name, id } with non-empty strings`,
+    );
+  }
 
   for (const key of ['procRoot', 'cgroupRoot', 'memCgroupRoot', 'stateFile', 'logDir', 'earlyoomDefaults']) {
     assert(typeof config.paths[key] === 'string' && config.paths[key].length > 0, `paths.${key} must be a non-empty string`);

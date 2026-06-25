@@ -184,31 +184,52 @@ export class AlertManager {
   }
 
   /**
+   * Resolve the owner @mention for a CONTAINER-scoped finding from
+   * config.teams.mentions, keyed by the owner base name in the container name
+   * (the [a-z]+ run after the leading "<num>-", e.g. "34-ilhansong_data2" ->
+   * "ilhansong"). Returns { name, id } or null (host findings, or no mapping).
+   */
+  ownerMention(finding) {
+    if (!finding || finding.entity === 'host' || typeof finding.name !== 'string') return null;
+    const mentions = this.config.teams && this.config.teams.mentions;
+    if (!mentions) return null;
+    const m = /^\d+-([a-z]+)/.exec(finding.name);
+    const who = m ? mentions[m[1]] : null;
+    return who && who.id && who.name ? who : null;
+  }
+
+  /**
    * Build the Microsoft Teams payload: a Power Automate "Workflows" message
    * envelope wrapping an Adaptive Card. The card carries the container name and
-   * the warning content (finding.msg) — that is the whole contract for this
-   * channel. Teams returns 202 Accepted on success (handled by res.ok).
+   * the warning content (finding.msg). When the container maps to an owner in
+   * config.teams.mentions, the card also @mentions that owner (an <at> token in
+   * the headline plus an msteams.entities mention) so they get pinged. Resolves
+   * never tag (recovery is good news, no need to ping). Teams returns 202 on
+   * success (handled by res.ok).
    */
   buildTeamsPayload(finding, { resolve = false, escalated = false } = {}) {
     const prefix = resolve ? 'RESOLVED' : escalated ? 'ESCALATED' : finding.severity.toUpperCase();
     const entityLabel = finding.name ? `${finding.name} (${shortId(finding.entity)})` : String(finding.entity);
+    const who = resolve ? null : this.ownerMention(finding);
+    const headline = who ? `<at>${who.name}</at> [${prefix}] ${entityLabel}` : `[${prefix}] ${entityLabel}`;
+    const content = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.4',
+      body: [
+        { type: 'TextBlock', text: headline, weight: 'Bolder', size: 'Medium', wrap: true },
+        { type: 'TextBlock', text: finding.msg, wrap: true },
+        { type: 'TextBlock', text: 'podman-watchdog (read-only, no-kill)', size: 'Small', isSubtle: true, wrap: true },
+      ],
+    };
+    if (who) {
+      content.msteams = {
+        entities: [{ type: 'mention', text: `<at>${who.name}</at>`, mentioned: { id: who.id, name: who.name } }],
+      };
+    }
     return {
       type: 'message',
-      attachments: [
-        {
-          contentType: 'application/vnd.microsoft.card.adaptive',
-          content: {
-            $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
-            type: 'AdaptiveCard',
-            version: '1.4',
-            body: [
-              { type: 'TextBlock', text: `[${prefix}] ${entityLabel}`, weight: 'Bolder', size: 'Medium', wrap: true },
-              { type: 'TextBlock', text: finding.msg, wrap: true },
-              { type: 'TextBlock', text: 'podman-watchdog (read-only, no-kill)', size: 'Small', isSubtle: true, wrap: true },
-            ],
-          },
-        },
-      ],
+      attachments: [{ contentType: 'application/vnd.microsoft.card.adaptive', content }],
     };
   }
 

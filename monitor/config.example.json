@@ -30,6 +30,7 @@
     "teams.webhookUrl": "Microsoft Teams Power Automate 'Workflows' incoming webhook URL. SECRET. Injected via TEAMS_WEBHOOK_URL env; leave empty here.",
     "teams.retries": "POST retry attempts after the first try. Calibrated: 3.",
     "teams.backoffMs": "Exponential backoff base (ms). Calibrated: 1000.",
+    "teams.mentions": "Optional owner @mention map for CONTAINER alerts, keyed by the container owner base name (the letters after the leading '<num>-', e.g. '34-ilhansong_data2' -> 'ilhansong'). Each value is { name, id } where id is the Teams UPN/email or Entra Object ID. SECRET (people's addresses) — set ONLY in the real config.json on the host, never commit. Empty {} => no mentions.",
     "paths": "Filesystem locations. cgroupRoot / memCgroupRoot are the cgroup v1 pids / memory parents for rootful podman. stateFile is 0644 world-readable (widget contract, no secrets). logDir holds daily JSONL."
   },
 
@@ -74,7 +75,8 @@
   "teams": {
     "webhookUrl": "",
     "retries": 3,
-    "backoffMs": 1000
+    "backoffMs": 1000,
+    "mentions": {}
   },
 
   "paths": {
